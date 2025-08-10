@@ -1,0 +1,52 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "证件管理应用模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "证件管理应用"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "证件管理"
+    },
+    {
+      "name": "app_name",
+      "value": "证件管理"
+    },
+    {
+      "name": "add_document",
+      "value": "添加证件"
+    },
+    {
+      "name": "edit_document",
+      "value": "编辑证件"
+    },
+    {
+      "name": "print_document",
+      "value": "打印证件"
+    },
+    {
+      "name": "settings",
+      "value": "设置"
+    },
+    {
+      "name": "camera_permission_reason",
+      "value": "用于拍摄证件照片进行识别和管理"
+    },
+    {
+      "name": "storage_permission_reason",
+      "value": "用于保存和管理证件图片文件"
+    },
+    {
+      "name": "bluetooth_permission_reason",
+      "value": "用于连接蓝牙打印机进行证件打印"
+    },
+    {
+      "name": "network_permission_reason",
+      "value": "用于网络连接和云同步功能"
+    }
+  ]
+}
