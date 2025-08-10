@@ -103,10 +103,10 @@ export class CommonUtils {
    * @param delay 延迟时间
    * @returns 防抖后的函数
    */
-  static debounce(func: Function, delay: number): Function {
+  static debounce<T extends (...args: never[]) => void>(func: T, delay: number): (...args: Parameters<T>) => void {
     let timeoutId: number | null = null
     
-    return function (...args: unknown[]) {
+    return function (...args: Parameters<T>) {
       if (timeoutId) {
         clearTimeout(timeoutId)
       }
@@ -123,10 +123,10 @@ export class CommonUtils {
    * @param delay 延迟时间
    * @returns 节流后的函数
    */
-  static throttle(func: Function, delay: number): Function {
+  static throttle<T extends (...args: never[]) => void>(func: T, delay: number): (...args: Parameters<T>) => void {
     let lastCall = 0
     
-    return function (...args: unknown[]) {
+    return function (...args: Parameters<T>) {
       const now = Date.now()
       
       if (now - lastCall >= delay) {
@@ -147,11 +147,11 @@ export class CommonUtils {
     }
     
     if (obj instanceof Date) {
-      return new Date(obj.getTime()) as unknown as T
+      return new Date(obj.getTime()) as T
     }
     
     if (obj instanceof Array) {
-      return obj.map(item => this.deepClone(item)) as unknown as T
+      return obj.map(item => this.deepClone(item)) as T
     }
     
     if (typeof obj === 'object') {

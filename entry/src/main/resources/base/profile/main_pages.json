@@ -5,6 +5,7 @@
     "pages/UploadPage",
     "pages/EditPage",
     "pages/PrintPage",
-    "pages/SettingsPage"
+    "pages/SettingsPage",
+    "pages/DocumentDetailPage"
   ]
 }

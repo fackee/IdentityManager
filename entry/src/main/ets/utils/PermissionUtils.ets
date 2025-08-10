@@ -1,5 +1,6 @@
 import { abilityAccessCtrl, Context, PermissionRequestResult, common, Permissions } from '@kit.AbilityKit'
 import { BusinessError } from '@kit.BasicServicesKit'
+import { UIContext } from '@kit.ArkUI'
 
 export class PermissionUtils {
   private static context: common.UIAbilityContext | null = null
@@ -181,9 +182,15 @@ export class PermissionUtils {
    * 显示权限说明对话框
    * @param permissionName 权限名称
    * @param description 权限说明
+   * @param context UI上下文
    */
-  static showPermissionDialog(permissionName: string, description: string) {
-    AlertDialog.show({
+  static showPermissionDialog(permissionName: string, description: string, context?: UIContext) {
+    if (!context) {
+      console.error('UIContext not available for showing permission dialog')
+      return
+    }
+
+    context.showAlertDialog({
       title: `需要${permissionName}权限`,
       message: description,
       primaryButton: {
@@ -200,5 +207,53 @@ export class PermissionUtils {
         }
       }
     })
+  }
+
+  /**
+   * 显示相机权限对话框
+   * @param context UI上下文
+   */
+  static showCameraPermissionDialog(context?: UIContext) {
+    PermissionUtils.showPermissionDialog(
+      '相机',
+      '需要相机权限来拍摄证件照片，请在设置中开启相机权限。',
+      context
+    )
+  }
+
+  /**
+   * 显示存储权限对话框
+   * @param context UI上下文
+   */
+  static showStoragePermissionDialog(context?: UIContext) {
+    PermissionUtils.showPermissionDialog(
+      '存储',
+      '需要存储权限来保存和读取证件图片，请在设置中开启存储权限。',
+      context
+    )
+  }
+
+  /**
+   * 显示蓝牙权限对话框
+   * @param context UI上下文
+   */
+  static showBluetoothPermissionDialog(context?: UIContext) {
+    PermissionUtils.showPermissionDialog(
+      '蓝牙',
+      '需要蓝牙权限来连接蓝牙打印机，请在设置中开启蓝牙权限。',
+      context
+    )
+  }
+
+  /**
+   * 显示网络权限对话框
+   * @param context UI上下文
+   */
+  static showNetworkPermissionDialog(context?: UIContext) {
+    PermissionUtils.showPermissionDialog(
+      '网络',
+      '需要网络权限来进行云同步和在线功能，请在设置中开启网络权限。',
+      context
+    )
   }
 } 

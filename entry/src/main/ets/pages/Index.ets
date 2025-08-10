@@ -1,5 +1,8 @@
 import { DocumentItem } from '../model/DocumentItem'
 import { DocumentType } from '../model/DocumentType'
+import { DocumentUtils } from '../utils/DocumentUtils'
+import { LocalDatabaseManager } from '../manager/LocalDatabaseManager'
+import { DocumentTypeInfo } from '../types/DocumentRecognition'
 
 @Entry
 @Component
@@ -7,37 +10,80 @@ struct Index {
   @State currentTab: number = 0
   @State documents: DocumentItem[] = []
   @State searchText: string = ''
+  @State documentTypes: DocumentTypeInfo[] = []
+  @State tabs: string[] = ['全部']
+  @State isLoading: boolean = false
   
-  private tabs: string[] = ['全部', '身份证', '护照', '驾驶证', '其他']
+  private databaseManager: LocalDatabaseManager = LocalDatabaseManager.getInstance()
 
   aboutToAppear() {
-    this.loadMockData()
+    this.initializeData()
   }
 
-  loadMockData() {
-    // 模拟数据
-    this.documents = [
-      new DocumentItem(
-        '1',
-        '张三的身份证',
-        '身份证',
-        '1101********1234',
-        '2025-12-31',
-        $r('app.media.background'),
-        new Date(),
-        new Date()
-      ),
-      new DocumentItem(
-        '2',
-        '李四的护照',
-        '护照',
-        'E12345678',
-        '2026-06-30',
-        $r('app.media.background'),
-        new Date(),
-        new Date()
-      )
-    ]
+  async initializeData() {
+    try {
+      this.isLoading = true
+      
+      // 初始化数据库
+      await this.databaseManager.initialize(getContext())
+      
+      // 加载文档类型
+      await this.loadDocumentTypes()
+      
+      // 加载文档列表
+      await this.loadDocuments()
+      
+      this.isLoading = false
+    } catch (error) {
+      console.error('初始化数据失败:', error)
+      this.isLoading = false
+    }
+  }
+
+  async loadDocumentTypes() {
+    try {
+      const types = await this.databaseManager.getDocumentTypes()
+      
+      // 构建标签页数组：全部 + 动态类型
+      this.tabs = ['全部']
+      this.documentTypes = types
+      
+      types.forEach(type => {
+        this.tabs.push(type.type)
+      })
+      
+      console.log('文档类型加载成功:', this.tabs)
+    } catch (error) {
+      console.error('加载文档类型失败:', error)
+    }
+  }
+
+  async loadDocuments() {
+    try {
+      const currentType = this.tabs[this.currentTab]
+      let documents: DocumentItem[] = []
+      
+      if (currentType === '全部') {
+        documents = await this.databaseManager.loadDocuments()
+      } else {
+        documents = await this.databaseManager.getDocumentsByType(currentType)
+      }
+      
+      // 如果有搜索文本，进行过滤
+      if (this.searchText) {
+        documents = documents.filter(doc => 
+          doc.name.includes(this.searchText) || 
+          doc.number.includes(this.searchText) ||
+          doc.type.includes(this.searchText)
+        )
+      }
+      
+      this.documents = documents
+      console.log('文档加载成功，共', documents.length, '个')
+    } catch (error) {
+      console.error('加载文档失败:', error)
+      this.documents = []
+    }
   }
 
   build() {
@@ -75,27 +121,37 @@ struct Index {
           .padding({ left: 16, right: 16 })
           .onChange((value: string) => {
             this.searchText = value
+            this.loadDocuments()
           })
       }
       .padding({ left: 20, right: 20, top: 12, bottom: 16 })
 
       // 分类标签
-      Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
-        ForEach(this.tabs, (tab: string, index: number) => {
-          TabContent() {
-            this.DocumentList()
-          }.tabBar(tab)
+      if (this.tabs.length > 1) {
+        Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
+          ForEach(this.tabs, (tab: string, index: number) => {
+            TabContent() {
+              this.DocumentList()
+            }.tabBar(this.TabBar(tab, index))
+          })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .onChange((index: number) => {
+          this.currentTab = index
+          this.loadDocuments()
         })
+      } else {
+        // 如果没有动态类型，显示简单的文档列表
+        Column() {
+          this.DocumentList()
+        }
+        .layoutWeight(1)
       }
-      .width('100%')
-      .layoutWeight(1)
-      .onChange((index: number) => {
-        this.currentTab = index
-      })
 
       // 底部导航栏
       Row() {
-        ForEach(['首页', '编辑工具', '打印', '设置'], (tab: string, index: number) => {
+        ForEach(['首页', '设置'], (tab: string, index: number) => {
           Column() {
             Text(tab)
               .fontSize(12)
@@ -119,8 +175,51 @@ struct Index {
   }
 
   @Builder
+  TabBar(tab: string, index: number) {
+    Row() {
+      if (tab === '全部') {
+        Text('全部')
+          .fontSize(14)
+          .fontColor(this.currentTab === index ? '#007DFF' : '#666666')
+      } else {
+        // 显示动态类型标签
+        this.DynamicTabContent(tab, index)
+      }
+    }
+    .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+  }
+
+  @Builder
+  DynamicTabContent(tab: string, index: number) {
+    Text(this.getTabDisplayText(tab))
+      .fontSize(14)
+      .fontColor(this.currentTab === index ? '#007DFF' : '#666666')
+  }
+
+  private getTabDisplayText(tab: string): string {
+    const typeInfo = this.documentTypes.find(type => type.type === tab)
+    if (typeInfo) {
+      return `${typeInfo.icon} ${typeInfo.type}(${typeInfo.count})`
+    }
+    return tab
+  }
+
+  @Builder
   DocumentList() {
-    if (this.documents.length === 0) {
+    if (this.isLoading) {
+      Column() {
+        LoadingProgress()
+          .width(50)
+          .height(50)
+          .margin({ bottom: 16 })
+        Text('加载中...')
+          .fontSize(16)
+          .fontColor('#666666')
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+    } else if (this.documents.length === 0) {
       Column() {
         Text('暂无证件')
           .fontSize(18)
@@ -150,26 +249,56 @@ struct Index {
   @Builder
   DocumentCard(document: DocumentItem) {
     Row() {
-      Image(document.imageUrl)
-        .width(80)
-        .height(60)
-        .borderRadius(8)
-        .objectFit(ImageFit.Cover)
+      Stack() {
+        Image(document.imageUrl)
+          .width(80)
+          .height(60)
+          .borderRadius(8)
+          .objectFit(ImageFit.Cover)
+
+        // 证件状态指示器
+        Text(DocumentUtils.getDocumentStatusText(document.expiryDate))
+          .fontSize(10)
+          .fontColor(Color.White)
+          .backgroundColor(DocumentUtils.getDocumentStatusColor(document.expiryDate))
+          .padding({ left: 4, right: 4, top: 2, bottom: 2 })
+          .borderRadius(4)
+          .position({ x: 0, y: 0 })
+      }
+      .width(80)
+      .height(60)
 
       Column() {
-        Text(document.name)
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .margin({ bottom: 4 })
+        Row() {
+          Text(DocumentUtils.getDocumentTypeIcon(document.type))
+            .fontSize(16)
+            .margin({ right: 8 })
+          
+          Text(document.name)
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+        }
+        .margin({ bottom: 4 })
         
-        Text(document.number)
+        Text(DocumentUtils.formatDocumentNumber(document.number))
           .fontSize(14)
           .fontColor('#666666')
           .margin({ bottom: 4 })
         
-        Text(`有效期至：${document.expiryDate}`)
-          .fontSize(12)
-          .fontColor('#999999')
+        Row() {
+          Text(`有效期至：${document.expiryDate}`)
+            .fontSize(12)
+            .fontColor('#999999')
+          
+          Blank()
+          
+          Text(DocumentUtils.getDocumentStatusText(document.expiryDate))
+            .fontSize(10)
+            .fontColor(Color.White)
+            .backgroundColor(DocumentUtils.getDocumentStatusColor(document.expiryDate))
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .borderRadius(8)
+        }
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
@@ -208,18 +337,58 @@ struct Index {
 
   private addDocument() {
     console.log('添加证件')
+    // 跳转到上传页面
+    this.getUIContext().getRouter().pushUrl({
+      url: 'pages/UploadPage'
+    })
   }
 
   private viewDocument(document: DocumentItem) {
     console.log('查看证件', document.id)
+    // 跳转到证件详情页面
+    this.getUIContext().getRouter().pushUrl({
+      url: 'pages/DocumentDetailPage',
+      params: {
+        documentId: document.id,
+        documentName: document.name,
+        documentType: document.type,
+        documentNumber: document.number,
+        documentExpiry: document.expiryDate,
+        documentImage: document.imageUrl
+      }
+    })
   }
 
   private editDocument(document: DocumentItem) {
     console.log('编辑证件', document.id)
+    // 跳转到编辑页面并传递证件数据
+    this.getUIContext().getRouter().pushUrl({
+      url: 'pages/EditPage',
+      params: {
+        documentId: document.id,
+        documentName: document.name,
+        documentType: document.type,
+        documentNumber: document.number,
+        documentExpiry: document.expiryDate,
+        documentImage: document.imageUrl
+      }
+    })
   }
 
   private printDocument(document: DocumentItem) {
     console.log('打印证件', document.id)
+    // 跳转到打印页面并传递证件数据
+    this.getUIContext().getRouter().pushUrl({
+      url: 'pages/PrintPage',
+      params: {
+        documentId: document.id,
+        documentName: document.name,
+        documentType: document.type,
+        documentNumber: document.number,
+        documentExpiry: document.expiryDate,
+        documentImage: document.imageUrl
+      }
+    })
   }
 
   private navigateToTab(index: number) {
@@ -227,14 +396,12 @@ struct Index {
       case 0: // 首页
         console.log('已在首页')
         break
-      case 1: // 编辑工具
-        console.log('导航到编辑工具')
-        break
-      case 2: // 打印
-        console.log('导航到打印页面')
-        break
-      case 3: // 设置
+      case 1: // 设置
         console.log('导航到设置页面')
+        // 跳转到设置页面
+        this.getUIContext().getRouter().pushUrl({
+          url: 'pages/SettingsPage'
+        })
         break
     }
   }

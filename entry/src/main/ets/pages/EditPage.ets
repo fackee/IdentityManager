@@ -1,4 +1,5 @@
 import { DocumentItem } from '../model/DocumentItem'
+import { DocumentEditParams } from '../types/RouterParams'
 
 @Entry
 @Component
@@ -8,6 +9,37 @@ struct EditPage {
   @State brightnessValue: number = 0
   @State contrastValue: number = 0
   @State saturationValue: number = 0
+  @State mode: string = 'edit' // 'edit' 或 'tool'
+  @State documentData: DocumentEditParams | null = null
+
+  aboutToAppear() {
+    // 获取路由参数
+    const params = this.getUIContext().getRouter().getParams() as DocumentEditParams
+    if (params) {
+      this.mode = params.mode || 'edit'
+      if (this.mode === 'edit' && params.documentId) {
+        // 编辑模式，接收证件数据
+        this.documentData = {
+          documentId: params.documentId,
+          documentName: params.documentName,
+          documentType: params.documentType,
+          documentNumber: params.documentNumber,
+          documentExpiry: params.documentExpiry,
+          documentImage: params.documentImage
+        }
+        this.document = new DocumentItem(
+          this.documentData.documentId || '',
+          this.documentData.documentName || '',
+          this.documentData.documentType || '',
+          this.documentData.documentNumber || '',
+          this.documentData.documentExpiry || '',
+          this.documentData.documentImage || $r('app.media.background'),
+          new Date(),
+          new Date()
+        )
+      }
+    }
+  }
 
   build() {
     Column() {
@@ -18,26 +50,28 @@ struct EditPage {
             this.goBack()
           })
         
-        Text('编辑证件')
+        Text(this.mode === 'edit' ? '编辑证件' : '编辑工具')
           .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .margin({ left: 16 })
 
         Blank()
 
-        Button('保存')
-          .backgroundColor('#007DFF')
-          .fontColor(Color.White)
-          .onClick(() => {
-            this.saveEdit()
-          })
+        if (this.mode === 'edit') {
+          Button('保存')
+            .backgroundColor('#007DFF')
+            .fontColor(Color.White)
+            .onClick(() => {
+              this.saveEdit()
+            })
+        }
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 12, bottom: 12 })
 
       // 图片编辑区域
       Stack() {
-        Image($r('app.media.background'))
+        Image(this.document?.imageUrl || $r('app.media.background'))
           .width('100%')
           .height(400)
           .objectFit(ImageFit.Cover)
@@ -282,10 +316,20 @@ struct EditPage {
 
   private saveEdit() {
     console.log('保存编辑')
-    this.goBack()
+    // 这里可以添加保存逻辑
+    this.getUIContext().showAlertDialog({
+      title: '保存成功',
+      message: '证件编辑已保存',
+      primaryButton: {
+        value: '确定',
+        action: () => {
+          this.goBack()
+        }
+      }
+    })
   }
 
   private goBack() {
-    console.log('返回')
+    this.getUIContext().getRouter().back()
   }
 } 

@@ -1,3 +1,5 @@
+import router from '@ohos.router'
+
 @Entry
 @Component
 struct SettingsPage {
@@ -127,7 +129,7 @@ struct SettingsPage {
   private manageAccount() {
     if (this.isLoggedIn) {
       // 显示账号信息或退出登录
-      AlertDialog.show({
+      this.getUIContext().showAlertDialog({
         title: '账号管理',
         message: '是否要退出登录？',
         primaryButton: {
@@ -157,7 +159,7 @@ struct SettingsPage {
   private toggleCloudSync(isOn: boolean) {
     if (isOn && !this.isLoggedIn) {
       // 如果开启云同步但未登录，提示登录
-      AlertDialog.show({
+      this.getUIContext().showAlertDialog({
         title: '需要登录',
         message: '开启云同步需要先登录账号',
         primaryButton: {
@@ -183,7 +185,7 @@ struct SettingsPage {
   }
 
   private showAbout() {
-    AlertDialog.show({
+    this.getUIContext().showAlertDialog({
       title: '关于证件管理',
       message: '版本：1.0.0\n\n一个安全、高效的证件数字化管理应用，支持AI识别、编辑美化和打印功能。',
       primaryButton: {
@@ -200,7 +202,7 @@ struct SettingsPage {
   }
 
   private clearCache() {
-    AlertDialog.show({
+    this.getUIContext().showAlertDialog({
       title: '清除缓存',
       message: '确定要清除应用缓存吗？这将释放156MB存储空间。',
       primaryButton: {
@@ -219,6 +221,6 @@ struct SettingsPage {
   }
 
   private goBack() {
-    console.log('返回')
+    this.getUIContext().getRouter().back()
   }
 } 
