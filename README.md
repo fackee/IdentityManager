@@ -1,244 +1,244 @@
 # 证件管理器 (Identity Manager)
 
-一个基于HarmonyOS的智能证件管理应用，支持证件拍照、识别、存储和管理。
+一个基于大模型的智能证件识别和管理应用，支持识别30种常见证件类型，包括身份证、护照、驾驶证、营业执照、毕业证等。
 
 ## 功能特性
 
-### 🔍 核心功能
-- **证件拍照与相册选择**: 支持拍照上传和从相册选择图片
-- **智能文档识别**: 调用后端API进行文档类型识别和信息提取
-- **动态表单渲染**: 根据识别结果动态生成表单字段
-- **本地数据库存储**: 使用HarmonyOS Preferences进行数据持久化
-- **动态标签页**: 根据存储的文档类型动态生成分类标签页
+- 📸 **智能识别**: 基于大模型API的证件图片识别
+- 🔒 **安全存储**: 本地加密存储证件信息
+- 📱 **多证件支持**: 支持30种常见证件类型，包括身份证、护照、驾驶证、营业执照、毕业证等
+- 🎯 **高精度识别**: 支持多种证件字段的精确提取
+- ⚙️ **灵活配置**: 可配置大模型API参数
+- 🔄 **自动备份**: 支持数据自动备份和恢复
 
-### 📱 用户界面
-- **现代化UI设计**: 采用Material Design风格
-- **响应式布局**: 适配不同屏幕尺寸
-- **流畅动画**: 提供良好的用户体验
-- **多步骤流程**: 清晰的上传和识别流程
+## 技术架构
 
-### 🔧 技术特性
-- **ArkTS开发**: 使用HarmonyOS原生开发语言
-- **声明式UI**: 基于ArkUI框架构建
-- **状态管理**: 使用@State进行组件状态管理
-- **路由系统**: 支持页面间导航和参数传递
-- **权限管理**: 完善的相机和存储权限处理
+- **前端框架**: HarmonyOS ArkTS
+- **大模型API**: OpenAI GPT-4 Vision / 其他支持视觉的模型
+- **数据存储**: 本地SQLite数据库
+- **图片处理**: HarmonyOS CameraKit & ImageKit
 
-## 页面结构
+## 代理服务配置
 
-### 主要页面
-- **Index.ets**: 主页面，显示证件列表和动态标签页
-- **UploadPage.ets**: 上传页面，支持拍照、预览、识别和保存
-- **EditPage.ets**: 编辑页面，用于修改证件信息
-- **PrintPage.ets**: 打印页面，提供打印功能
-- **DocumentDetailPage.ets**: 详情页面，显示证件详细信息
-- **SettingsPage.ets**: 设置页面，应用配置
+### 服务信息
 
-### 核心组件
-- **DocumentManager**: 文档管理器，处理CRUD操作
-- **LocalDatabaseManager**: 本地数据库管理器，数据持久化
-- **DocumentRecognitionService**: 文档识别服务，API调用
-- **ImageUtils**: 图片处理工具，拍照和相册选择
-- **PermissionUtils**: 权限管理工具
-- **DocumentUtils**: 文档工具类，提供辅助功能
+应用使用预配置的代理服务进行证件识别，无需用户配置API密钥。
 
-## 项目结构
+- **服务地址**: `http://47.111.83.157/llm`
+- **认证方式**: 签名验证
+- **支持功能**: 多模态图片识别
 
-```
-entry/src/main/ets/
-├── pages/                    # 页面文件
-│   ├── Index.ets            # 主页面
-│   ├── UploadPage.ets       # 上传页面
-│   ├── EditPage.ets         # 编辑页面
-│   ├── PrintPage.ets        # 打印页面
-│   ├── DocumentDetailPage.ets # 详情页面
-│   └── SettingsPage.ets     # 设置页面
-├── model/                   # 数据模型
-│   ├── DocumentItem.ets     # 文档项模型
-│   └── DocumentType.ets     # 文档类型枚举
-├── manager/                 # 管理器
-│   ├── DocumentManager.ets  # 文档管理器
-│   └── LocalDatabaseManager.ets # 本地数据库管理器
-├── services/                # 服务层
-│   └── DocumentRecognitionService.ets # 文档识别服务
-├── utils/                   # 工具类
-│   ├── DocumentUtils.ets    # 文档工具
-│   ├── PermissionUtils.ets  # 权限工具
-│   └── ImageUtils.ets       # 图片工具
-├── types/                   # 类型定义
-│   ├── RouterParams.ets     # 路由参数类型
-│   └── DocumentRecognition.ets # 文档识别类型
-└── entryability/            # 应用入口
-    └── EntryAbility.ets     # 主入口
-```
+### 服务状态检查
 
-## 使用说明
+1. **打开应用设置**
+   - 进入应用 → 设置
+   - 查看"代理服务状态"部分
 
-### 添加证件
-1. 点击主页面的"+"按钮
-2. 选择拍照或从相册选择
-3. 预览图片
-4. 等待识别完成
-5. 确认识别结果并保存
+2. **检查连接状态**
+   - 绿色圆点表示服务正常
+   - 红色圆点表示服务异常
+   - 点击"重新测试连接"按钮刷新状态
 
-### 管理证件
-- **查看**: 点击证件卡片查看详情
-- **编辑**: 点击"编辑"按钮修改信息
-- **打印**: 点击"打印"按钮进行打印
-- **搜索**: 使用搜索栏快速查找
-- **分类**: 使用动态标签页按类型筛选
+### API请求格式
 
-### 权限设置
-应用需要以下权限：
-- **相机权限**: 用于拍照功能
-- **存储权限**: 用于访问相册和保存图片
-- **网络权限**: 用于文档识别API调用
+应用会向代理服务发送以下格式的请求：
 
-## 技术实现
-
-### 数据模型
-```typescript
-export class DocumentItem {
-  id: string
-  name: string
-  type: string
-  number: string
-  expiryDate: string
-  imageUrl: Resource
-  createTime: Date
-  updateTime: Date
-  dynamicFields: Map<string, string>  // 动态表单字段
-  recognitionConfidence: number       // 识别置信度
-  originalImagePath: string           // 原始图片路径
+```json
+{
+  "prompt": "请分析这张证件图片，识别证件类型并提取关键信息...",
+  "image_base64": "{base64编码的图片}",
+  "max_tokens": 2000,
+  "temperature": 0.1
 }
 ```
 
-### 本地存储
-使用HarmonyOS Preferences API进行数据持久化：
-- 文档列表存储
-- 文档类型统计
-- 用户偏好设置
+### 认证头格式
 
-### 文档识别
-- 调用后端API进行文档识别
-- 支持多种文档类型（身份证、护照、驾驶证、银行卡）
-- 返回结构化的识别结果
-- 动态生成表单字段
-
-### 动态标签页
-- 根据存储的文档类型动态生成标签页
-- 显示各类型文档数量
-- 支持实时更新
-
-## 开发环境
-
-- **HarmonyOS SDK**: 4.0.0+
-- **DevEco Studio**: 4.0.0+
-- **Node.js**: 16.0.0+
-- **TypeScript**: 4.9.0+
-
-## 构建和运行
-
-1. 克隆项目
-```bash
-git clone [repository-url]
-cd IdentityManager
-```
-
-2. 安装依赖
-```bash
-npm install
-```
-
-3. 在DevEco Studio中打开项目
-
-4. 配置设备或模拟器
-
-5. 运行应用
-
-## 配置说明
-
-### 权限配置
-在`entry/src/main/module.json5`中配置所需权限：
 ```json
 {
-  "requestPermissions": [
+  "X-Timestamp": "1703123456",
+  "X-AppId": "freelancer.zhujx",
+  "X-Nonce": "a1b2c3d4",
+  "X-Signature": "sha256签名"
+}
+```
+
+### 响应格式
+
+代理服务应返回以下格式的JSON响应：
+
+```json
+{
+  "isDocument": true,
+  "documentType": "身份证",
+  "confidence": 0.95,
+  "message": "",
+  "fields": [
     {
-      "name": "ohos.permission.CAMERA",
-      "reason": "用于拍照功能"
+      "key": "name",
+      "value": "张三",
+      "label": "姓名",
+      "confidence": 0.95
     },
     {
-      "name": "ohos.permission.READ_MEDIA",
-      "reason": "用于访问相册"
-    },
-    {
-      "name": "ohos.permission.WRITE_MEDIA",
-      "reason": "用于保存图片"
+      "key": "id_number",
+      "value": "110101199001011234",
+      "label": "公民身份号码",
+      "confidence": 0.98
     }
   ]
 }
 ```
 
-### API配置
-在`DocumentRecognitionService.ets`中配置后端API地址：
-```typescript
-private static readonly API_BASE_URL = 'https://your-api-domain.com'
+### 支持的证件类型
+
+应用支持以下30种证件类型：
+
+**身份类证件**：身份证、居住证、护照、户口本、军人证、团员证、党员证、港澳通行证
+
+**职业资格类**：从业资格证、英语四六级证、汽车驾驶证
+
+**车辆相关**：行驶证、养路费证、营运证
+
+**企业证照**：营业执照、经营许可证、税务登记证、卫生许可证、消防许可证
+
+**婚姻家庭**：结婚证、涉外婚姻证明、离婚证、出生证、预防接种证、节育证
+
+**社会保障**：养老保险证
+
+**教育类**：毕业证、学位证
+
+**其他**：签证、国有土地使用证
+
+如果上传的图片不是证件或不在支持列表中，系统会提示用户并归类为"其他"。
+
+## 使用说明
+
+### 添加证件
+
+1. **选择上传方式**
+   - 拍照上传: 使用相机拍摄证件
+   - 从相册选择: 选择已有的证件照片
+
+2. **图片预览**
+   - 确认图片清晰度
+   - 调整图片角度（如需要）
+
+3. **智能识别**
+   - 系统自动调用大模型API识别证件
+   - 提取关键信息字段
+   - 显示识别结果和置信度
+
+4. **编辑和保存**
+   - 检查识别结果
+   - 编辑不准确的字段
+   - 保存到本地数据库
+
+### 管理证件
+
+- **查看列表**: 浏览所有已保存的证件
+- **搜索功能**: 按证件类型或关键词搜索
+- **编辑信息**: 修改证件详细信息
+- **删除证件**: 安全删除不需要的证件
+
+## 隐私安全
+
+- 🔐 **本地存储**: 所有数据存储在设备本地
+- 🔒 **加密保护**: 敏感信息使用加密存储
+- 🚫 **不上传**: 证件图片不会上传到云端
+- 🛡️ **权限控制**: 最小化权限申请
+
+## 开发环境
+
+### 系统要求
+
+- HarmonyOS 4.0+
+- DevEco Studio 4.0+
+- Node.js 16+
+
+### 安装依赖
+
+```bash
+npm install
 ```
 
-## 更新日志
+### 运行项目
 
-### v1.0.4 (最新)
-- ✨ 新增拍照和相册选择功能
-- ✨ 新增文档识别功能（模拟API）
-- ✨ 新增动态表单渲染
-- ✨ 新增本地数据库存储
-- ✨ 新增动态标签页功能
-- 🔧 优化图片处理流程
-- 🔧 改进权限管理
-- 🐛 修复多个已知问题
+1. 在DevEco Studio中打开项目
+2. 配置API密钥（见配置步骤）
+3. 连接设备或启动模拟器
+4. 点击运行按钮
 
-### v1.0.3
-- 🔧 更新路由API，使用`this.getUIContext().getRouter()`
-- 🔧 更新对话框API，使用`this.getUIContext().showAlertDialog`
-- 🐛 修复HarmonyOS 18兼容性问题
+## 项目结构
 
-### v1.0.2
-- 🔧 修复类型检查错误
-- ✨ 新增`RouterParams.ets`类型定义文件
-- 🔧 移除`any`类型使用
-- 🐛 修复`router.getParams()`返回类型问题
+```
+IdentityManager/
+├── entry/                    # 主模块
+│   └── src/main/ets/
+│       ├── pages/           # 页面组件
+│       ├── services/        # 服务层
+│       ├── manager/         # 数据管理
+│       ├── model/           # 数据模型
+│       ├── utils/           # 工具类
+│       └── types/           # 类型定义
+├── AppScope/                # 应用级配置
+└── README.md               # 项目说明
+```
 
-### v1.0.1
-- 🔧 修复`AlertDialog.show`弃用问题
-- ✨ 新增`PermissionUtils.ets`权限管理工具
-- 🔧 改进权限申请流程
-- 📝 更新文档和示例
+## 核心文件说明
 
-### v1.0.0
-- 🎉 初始版本发布
-- ✨ 基础证件管理功能
-- ✨ 编辑和打印功能
-- ✨ 页面导航系统
-- ✨ 证件详情页面
+- `DocumentRecognitionService.ets`: 大模型API调用服务
+- `UploadPage.ets`: 证件上传和识别页面
+- `SettingsPage.ets`: 应用设置和API配置
+- `CommonUtils.ets`: 通用工具和配置管理
+- `ImageUtils.ets`: 图片处理工具
+
+## 故障排除
+
+### 常见问题
+
+1. **代理服务连接失败**
+   - 检查网络连接
+   - 确认代理服务是否正常运行
+   - 查看设置页面中的服务状态
+
+2. **识别准确率低**
+   - 确保图片清晰度足够
+   - 避免强光反射
+   - 保持证件完整可见
+
+3. **应用崩溃**
+   - 检查设备存储空间
+   - 重启应用
+   - 清除应用缓存
+
+### 日志查看
+
+在DevEco Studio的控制台中查看详细日志：
+
+```bash
+# 查看代理服务调用日志
+console.log('开始使用代理服务识别文档...')
+
+# 查看错误信息
+console.error('文档识别失败:', error)
+```
 
 ## 贡献指南
 
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
+欢迎提交Issue和Pull Request来改进项目。
 
 ## 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+本项目采用 MIT 许可证。
 
 ## 联系方式
 
-- 项目维护者: [Your Name]
-- 邮箱: [your.email@example.com]
-- 项目链接: [https://github.com/yourusername/IdentityManager]
+如有问题或建议，请通过以下方式联系：
 
-## 致谢
+- 邮箱: [your-email@example.com]
+- GitHub: [项目地址]
 
-感谢HarmonyOS开发团队提供的优秀开发框架和工具。 
+---
+
+**注意**: 请确保遵守相关法律法规，合理使用大模型API，保护个人隐私信息。 

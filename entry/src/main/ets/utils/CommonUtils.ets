@@ -1,92 +1,111 @@
+import preferences from '@kit.PreferencesKit'
+
 export class CommonUtils {
-  /**
-   * 格式化日期
-   * @param date 日期对象
-   * @param format 格式化字符串
-   * @returns 格式化后的日期字符串
-   */
-  static formatDate(date: Date, format: string = 'YYYY-MM-DD'): string {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    
-    return format
-      .replace('YYYY', year.toString())
-      .replace('MM', month)
-      .replace('DD', day)
-  }
+  private static readonly PREFERENCES_NAME = 'IdentityManager'
+  private static readonly API_CONFIG_KEY = 'api_config'
+  private static readonly USER_SETTINGS_KEY = 'user_settings'
 
-  /**
-   * 检查字符串是否为空
-   * @param str 待检查的字符串
-   * @returns 是否为空
-   */
-  static isEmpty(str: string): boolean {
-    return !str || str.trim().length === 0
-  }
-
-  /**
-   * 生成随机ID
-   * @returns 随机ID字符串
-   */
-  static generateId(): string {
-    return Date.now().toString() + Math.random().toString(36).substr(2, 9)
-  }
-
-  /**
-   * 脱敏处理
-   * @param text 原始文本
-   * @param start 开始位置
-   * @param end 结束位置
-   * @returns 脱敏后的文本
-   */
-  static maskText(text: string, start: number = 4, end: number = -4): string {
-    if (!text || text.length < start + Math.abs(end)) {
-      return text
-    }
-    
-    const prefix = text.substring(0, start)
-    const suffix = end < 0 ? text.substring(text.length + end) : text.substring(end)
-    const mask = '*'.repeat(text.length - start - (end < 0 ? Math.abs(end) : end))
-    
-    return prefix + mask + suffix
-  }
-
-  /**
-   * 验证身份证号码
-   * @param idNumber 身份证号码
-   * @returns 是否有效
-   */
-  static validateIdNumber(idNumber: string): boolean {
-    if (!idNumber || idNumber.length !== 18) {
+  // 保存API配置
+  static async saveAPIConfig(config: {
+    baseUrl: string
+    apiKey: string
+    model: string
+  }): Promise<boolean> {
+    try {
+      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
+      await preferencesHelper.put(this.API_CONFIG_KEY, JSON.stringify(config))
+      await preferencesHelper.flush()
+      console.log('API配置保存成功')
+      return true
+    } catch (error) {
+      console.error('保存API配置失败:', error)
       return false
     }
-    
-    // 简单的身份证号码验证
-    const pattern = /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/
-    return pattern.test(idNumber)
   }
 
-  /**
-   * 验证护照号码
-   * @param passportNumber 护照号码
-   * @returns 是否有效
-   */
-  static validatePassportNumber(passportNumber: string): boolean {
-    if (!passportNumber) {
+  // 获取API配置
+  static async getAPIConfig(): Promise<{
+    baseUrl: string
+    apiKey: string
+    model: string
+  } | null> {
+    try {
+      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
+      const configString = await preferencesHelper.get(this.API_CONFIG_KEY, '')
+      
+      if (configString) {
+        return JSON.parse(configString)
+      }
+      return null
+    } catch (error) {
+      console.error('获取API配置失败:', error)
+      return null
+    }
+  }
+
+  // 保存用户设置
+  static async saveUserSettings(settings: {
+    autoSave: boolean
+    imageQuality: number
+    enableBackup: boolean
+  }): Promise<boolean> {
+    try {
+      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
+      await preferencesHelper.put(this.USER_SETTINGS_KEY, JSON.stringify(settings))
+      await preferencesHelper.flush()
+      console.log('用户设置保存成功')
+      return true
+    } catch (error) {
+      console.error('保存用户设置失败:', error)
       return false
     }
-    
-    // 简单的护照号码验证
-    const pattern = /^[A-Z]\d{8}$/
-    return pattern.test(passportNumber)
   }
 
-  /**
-   * 获取文件大小描述
-   * @param bytes 字节数
-   * @returns 文件大小描述
-   */
+  // 获取用户设置
+  static async getUserSettings(): Promise<{
+    autoSave: boolean
+    imageQuality: number
+    enableBackup: boolean
+  }> {
+    try {
+      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
+      const settingsString = await preferencesHelper.get(this.USER_SETTINGS_KEY, '')
+      
+      if (settingsString) {
+        return JSON.parse(settingsString)
+      }
+      
+      // 返回默认设置
+      return {
+        autoSave: true,
+        imageQuality: 0.8,
+        enableBackup: true
+      }
+    } catch (error) {
+      console.error('获取用户设置失败:', error)
+      return {
+        autoSave: true,
+        imageQuality: 0.8,
+        enableBackup: true
+      }
+    }
+  }
+
+  // 清除所有配置
+  static async clearAllConfig(): Promise<boolean> {
+    try {
+      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
+      await preferencesHelper.clear()
+      await preferencesHelper.flush()
+      console.log('所有配置已清除')
+      return true
+    } catch (error) {
+      console.error('清除配置失败:', error)
+      return false
+    }
+  }
+
+  // 格式化文件大小
   static formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 B'
     
@@ -97,61 +116,57 @@ export class CommonUtils {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  /**
-   * 防抖函数
-   * @param func 要执行的函数
-   * @param delay 延迟时间
-   * @returns 防抖后的函数
-   */
-  static debounce<T extends (...args: never[]) => void>(func: T, delay: number): (...args: Parameters<T>) => void {
-    let timeoutId: number | null = null
+  // 格式化日期
+  static formatDate(date: Date): string {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
     
-    return function (...args: Parameters<T>) {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-      
-      timeoutId = setTimeout(() => {
-        func(...args)
-      }, delay)
-    }
+    return `${year}-${month}-${day} ${hours}:${minutes}`
   }
 
-  /**
-   * 节流函数
-   * @param func 要执行的函数
-   * @param delay 延迟时间
-   * @returns 节流后的函数
-   */
-  static throttle<T extends (...args: never[]) => void>(func: T, delay: number): (...args: Parameters<T>) => void {
-    let lastCall = 0
-    
-    return function (...args: Parameters<T>) {
-      const now = Date.now()
-      
-      if (now - lastCall >= delay) {
-        lastCall = now
-        func(...args)
-      }
-    }
+  // 验证邮箱格式
+  static isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
   }
 
-  /**
-   * 深拷贝对象
-   * @param obj 要拷贝的对象
-   * @returns 拷贝后的对象
-   */
+  // 验证手机号格式
+  static isValidPhone(phone: string): boolean {
+    const phoneRegex = /^1[3-9]\d{9}$/
+    return phoneRegex.test(phone)
+  }
+
+  // 验证身份证号格式
+  static isValidIDCard(idCard: string): boolean {
+    const idCardRegex = /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/
+    return idCardRegex.test(idCard)
+  }
+
+  // 生成随机字符串
+  static generateRandomString(length: number = 8): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let result = ''
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
+  // 深拷贝对象
   static deepClone<T>(obj: T): T {
     if (obj === null || typeof obj !== 'object') {
       return obj
     }
     
     if (obj instanceof Date) {
-      return new Date(obj.getTime()) as T
+      return new Date(obj.getTime()) as unknown as T
     }
     
     if (obj instanceof Array) {
-      return obj.map(item => this.deepClone(item)) as T
+      return obj.map(item => this.deepClone(item)) as unknown as T
     }
     
     if (typeof obj === 'object') {
@@ -165,5 +180,36 @@ export class CommonUtils {
     }
     
     return obj
+  }
+
+  // 防抖函数
+  static debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+  ): (...args: Parameters<T>) => void {
+    let timeout: number | null = null
+    
+    return (...args: Parameters<T>) => {
+      if (timeout) {
+        clearTimeout(timeout)
+      }
+      timeout = setTimeout(() => func(...args), wait) as unknown as number
+    }
+  }
+
+  // 节流函数
+  static throttle<T extends (...args: any[]) => any>(
+    func: T,
+    limit: number
+  ): (...args: Parameters<T>) => void {
+    let inThrottle: boolean = false
+    
+    return (...args: Parameters<T>) => {
+      if (!inThrottle) {
+        func(...args)
+        inThrottle = true
+        setTimeout(() => inThrottle = false, limit)
+      }
+    }
   }
 } 
