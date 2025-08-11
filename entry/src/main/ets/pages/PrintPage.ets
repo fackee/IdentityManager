@@ -1,6 +1,7 @@
 import { DocumentItem } from '../model/DocumentItem'
 import router from '@ohos.router'
 import { DocumentPrintParams } from '../types/RouterParams'
+import image from '@kit.ImageKit'
 
 @Entry
 @Component
@@ -43,7 +44,7 @@ struct PrintPage {
         '身份证',
         '1101********1234',
         '2025-12-31',
-        $r('app.media.background'),
+        $r('app.media.background').bundleName,
         new Date(),
         new Date()
       ),
@@ -53,7 +54,7 @@ struct PrintPage {
         '护照',
         'E12345678',
         '2026-06-30',
-        $r('app.media.background'),
+        $r('app.media.background').bundleName,
         new Date(),
         new Date()
       )
@@ -236,7 +237,7 @@ struct PrintPage {
           .fontWeight(FontWeight.Medium)
           .margin({ bottom: 16 })
 
-        Image(this.documentData?.documentImage || $r('app.media.background'))
+        Image(this.documentData?.documentImage ? this.documentData.documentImage : $r('app.media.background'))
           .width('100%')
           .height(200)
           .borderRadius(8)
@@ -267,7 +268,7 @@ struct PrintPage {
                   console.log('选择证件:', document.id, value)
                 })
 
-              Image(document.imageUrl)
+              Image(document.imageUrl ? document.imageUrl : $r('app.media.background'))
                 .width(60)
                 .height(45)
                 .borderRadius(8)

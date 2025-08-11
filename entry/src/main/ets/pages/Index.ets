@@ -1,5 +1,4 @@
 import { DocumentItem } from '../model/DocumentItem'
-import { DocumentType } from '../model/DocumentType'
 import { DocumentUtils } from '../utils/DocumentUtils'
 import { LocalDatabaseManager } from '../manager/LocalDatabaseManager'
 import { DocumentTypeInfo } from '../types/DocumentRecognition'
@@ -250,7 +249,7 @@ struct Index {
   DocumentCard(document: DocumentItem) {
     Row() {
       Stack() {
-        Image(document.imageUrl)
+        Image(document.imageUrl ? document.imageUrl : $r('app.media.background'))
           .width(80)
           .height(60)
           .borderRadius(8)

@@ -14,7 +14,7 @@ export class DocumentRecognitionService {
       }
 
       // 模拟API调用 - 在实际项目中替换为真实的HTTP请求
-      return await this.mockRecognitionAPI(request)
+      return await DocumentRecognitionService.mockRecognitionAPI(request)
       
       // 实际的HTTP请求代码（注释掉，因为需要真实的API地址）
       /*
@@ -51,17 +51,17 @@ export class DocumentRecognitionService {
   // 模拟识别API（用于测试）
   private static async mockRecognitionAPI(request: RecognitionRequest): Promise<RecognitionResponse> {
     // 模拟网络延迟
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise<void>(resolve => setTimeout(resolve, 2000))
 
     // 根据图片内容模拟不同的识别结果
     const imageLength = request.imageBase64.length
-    const documentType = this.getMockDocumentType(imageLength)
+    const documentType = DocumentRecognitionService.getMockDocumentType(imageLength)
     
     return {
       success: true,
       documentType: documentType,
       confidence: 0.85 + Math.random() * 0.1, // 85%-95%的置信度
-      fields: this.getMockFields(documentType)
+      fields: DocumentRecognitionService.getMockFields(documentType)
     }
   }
 
@@ -74,7 +74,7 @@ export class DocumentRecognitionService {
 
   // 获取模拟的识别字段
   private static getMockFields(documentType: string): RecognitionField[] {
-    const fieldTemplates: { [key: string]: RecognitionField[] } = {
+    const fieldTemplates: Record<string, RecognitionField[]> = {
       '身份证': [
         { key: 'name', value: '张三', confidence: 0.95, label: '姓名' },
         { key: 'gender', value: '男', confidence: 0.90, label: '性别' },
@@ -115,7 +115,8 @@ export class DocumentRecognitionService {
       ]
     }
 
-    return fieldTemplates[documentType] || []
+    const fields = fieldTemplates[documentType]
+    return fields || []
   }
 
   // 验证识别结果

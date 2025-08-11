@@ -1,18 +1,38 @@
 import { camera } from '@kit.CameraKit'
 import { image } from '@kit.ImageKit'
 import { BusinessError } from '@kit.BasicServicesKit'
-import { picker } from '@kit.MultimediaKit'
-import { mediaLibrary } from '@kit.MultimediaKit'
+import {
+  PhotoPickerComponent,
+  PickerController,
+  PickerOptions,
+  DataType,
+  BaseItemInfo,
+  ItemInfo,
+  PhotoBrowserInfo,
+  ItemType,
+  ClickType,
+  MaxCountType,
+  PhotoBrowserRange,
+  ReminderMode,
+  photoAccessHelper
+} from '@kit.MediaLibraryKit';
 import { ImageSelectionResult } from '../types/DocumentRecognition'
 import { PermissionUtils } from './PermissionUtils'
 
 export class ImageUtils {
   private static cameraManager: camera.CameraManager | null = null
-  private static photoPicker: picker.PhotoPicker | null = null
   private static photoSession: camera.PhotoSession | null = null
   private static cameraInput: camera.CameraInput | null = null
   private static previewOutput: camera.PreviewOutput | null = null
   private static photoOutput: camera.PhotoOutput | null = null
+
+  // 相册选择相关状态
+  private static pickerOptions: PickerOptions = new PickerOptions()
+  private static pickerController: PickerController = new PickerController()
+  private static selectedUris: Array<string> = new Array<string>()
+  private static currentUri: string = ''
+  private static isBrowserShow: boolean = false
+  private static selectionCallback: ((result: ImageSelectionResult) => void) | null = null
 
   // 设置拍照输出回调
   private static setPhotoOutputCb(photoOutput: camera.PhotoOutput): void {
@@ -444,7 +464,85 @@ export class ImageUtils {
     }
   }
 
-  // 从相册选择图片
+  // 初始化相册选择器
+  static initializePhotoPicker(): void {
+    // 设置picker宫格页数据类型
+    ImageUtils.pickerOptions.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_VIDEO_TYPE // 图片和照片都显示。
+    // 最大选择数量。
+    ImageUtils.pickerOptions.maxSelectNumber = 1;
+    // 超出最大选择数量时。
+    ImageUtils.pickerOptions.maxSelectedReminderMode = ReminderMode.TOAST;
+    // 是否展示搜索框，默认false。
+    ImageUtils.pickerOptions.isSearchSupported = true;
+    // 是否支持拍照，默认false。
+    ImageUtils.pickerOptions.isPhotoTakingSupported = true;
+  }
+
+  // 资源被选中回调，返回资源的信息，以及选中方式。
+  static onItemClicked(itemInfo: ItemInfo, clickType: ClickType): boolean {
+    if (!itemInfo) {
+      return false;
+    }
+    let type: ItemType | undefined = itemInfo.itemType;
+    let uri: string | undefined = itemInfo.uri;
+    if (type === ItemType.CAMERA) {
+      // 点击相机item。
+      return true; // 返回true则拉起系统相机，若应用需要自行处理则返回false。
+    } else {
+      if (clickType === ClickType.SELECTED) {
+        // 应用做自己的业务处理。
+        if (uri) {
+          ImageUtils.selectedUris.push(uri);
+          ImageUtils.pickerOptions.preselectedUris = [...ImageUtils.selectedUris];
+        }
+        return true; // 返回true则勾选，否则则不响应勾选。
+      } else {
+        if (uri) {
+          ImageUtils.selectedUris = ImageUtils.selectedUris.filter((item: string) => {
+            return item != uri;
+          });
+          ImageUtils.pickerOptions.preselectedUris = [...ImageUtils.selectedUris];
+        }
+      }
+      return true;
+    }
+  }
+
+  // 进入大图的回调。
+  static onEnterPhotoBrowser(photoBrowserInfo: PhotoBrowserInfo): boolean {
+    ImageUtils.isBrowserShow = true;
+    return true;
+  }
+
+  // 退出大图的回调。
+  static onExitPhotoBrowser(photoBrowserInfo: PhotoBrowserInfo): boolean {
+    ImageUtils.isBrowserShow = false;
+    return true;
+  }
+
+  // 接收到该回调后，便可通过pickerController相关接口向picker发送数据，在此之前不生效。
+  static onPickerControllerReady(): void {
+  }
+
+  // 大图左右滑动的回调。
+  static onPhotoBrowserChanged(browserItemInfo: BaseItemInfo): boolean {
+    ImageUtils.currentUri = browserItemInfo.uri ?? '';
+    return true;
+  }
+
+  // 已勾选图片被删除时的回调。
+  static onSelectedItemsDeleted(baseItemInfos: Array<BaseItemInfo>): void {
+  }
+
+  // 超过最大选择数量再次点击时的回调。
+  static onExceedMaxSelected(exceedMaxCountType: MaxCountType): void {
+  }
+
+  // 当前相册被删除时的回调。
+  static onCurrentAlbumDeleted(): void {
+  }
+
+  // 从相册选择图片（使用新的PhotoPickerComponent API）
   static async selectFromGallery(context: Context): Promise<ImageSelectionResult> {
     try {
       // 检查存储权限
@@ -456,35 +554,18 @@ export class ImageUtils {
         }
       }
 
-      // 创建图片选择器
-      ImageUtils.photoPicker = picker.createPhotoPicker()
+      // 初始化相册选择器
+      ImageUtils.initializePhotoPicker();
       
-      // 设置选择选项
-      const photoSelectOptions: picker.PhotoSelectOptions = {
-        MIMEType: picker.PhotoViewMIMEType.IMAGE_TYPE,
-        maxSelectNumber: 1
-      }
+      // 清空之前的选择
+      ImageUtils.selectedUris = [];
+      ImageUtils.pickerOptions.preselectedUris = [];
 
-      // 选择图片
-      const photoAssets = await ImageUtils.photoPicker.select(photoSelectOptions)
-      
-      if (photoAssets.length === 0) {
-        return {
-          success: false,
-          error: '未选择图片'
-        }
-      }
-
-      const photoAsset = photoAssets[0]
-      
-      // 获取图片路径
-      const imagePath = await ImageUtils.getImagePath(photoAsset)
-      const imageBase64 = await ImageUtils.convertImageToBase64(imagePath)
-
+      // 返回成功，实际的选择逻辑将在组件中处理
       return {
         success: true,
-        imagePath: imagePath,
-        imageBase64: imageBase64
+        imagePath: '',
+        imageBase64: ''
       }
 
     } catch (error) {
@@ -496,54 +577,32 @@ export class ImageUtils {
     }
   }
 
-  // 获取图片路径
-  private static async getImagePath(photoAsset: picker.PhotoAsset): Promise<string> {
-    try {
-      const fd = await photoAsset.open('r')
-      const buffer = await fd.read()
-      await fd.close()
-      
-      // 保存到临时文件
-      const media = mediaLibrary.getMediaLibrary(getContext())
-      const fileAsset = await media.createAsset(
-        mediaLibrary.MediaType.IMAGE,
-        `selected_${Date.now()}.jpg`
-      )
-      
-      const writeFd = await fileAsset.open('rw')
-      await writeFd.write(buffer)
-      await writeFd.close()
-      
-      return fileAsset.uri
-    } catch (error) {
-      console.error('获取图片路径失败:', error)
-      throw error
-    }
+  // 获取相册选择器的配置
+  static getPickerOptions(): PickerOptions {
+    return ImageUtils.pickerOptions;
   }
 
-  // 转换图片为Base64
-  private static async convertImageToBase64(imagePath: string): Promise<string> {
-    try {
-      const media = mediaLibrary.getMediaLibrary(getContext())
-      const fileAsset = await media.fetchFileAssets(mediaLibrary.FileKey.URI, imagePath)
-      
-      if (fileAsset.getCount() === 0) {
-        throw new Error('图片文件不存在')
-      }
-      
-      const asset = await fileAsset.getFirstObject()
-      const fd = await asset.open('r')
-      const buffer = await fd.read()
-      await fd.close()
-      
-      // 转换为Base64
-      const base64 = buffer.toString('base64')
-      return base64
-    } catch (error) {
-      console.error('转换图片为Base64失败:', error)
-      throw error
-    }
+  // 获取相册选择器的控制器
+  static getPickerController(): PickerController {
+    return ImageUtils.pickerController;
   }
+
+  // 获取已选择的图片URI列表
+  static getSelectedUris(): Array<string> {
+    return ImageUtils.selectedUris;
+  }
+
+  // 获取当前URI
+  static getCurrentUri(): string {
+    return ImageUtils.currentUri;
+  }
+
+  // 获取是否显示大图
+  static getIsBrowserShow(): boolean {
+    return ImageUtils.isBrowserShow;
+  }
+
+
 
   // 压缩图片
   static async compressImage(imagePath: string, quality: number = 0.8): Promise<string> {
@@ -563,9 +622,6 @@ export class ImageUtils {
     if (ImageUtils.cameraManager) {
       ImageUtils.cameraManager = null
     }
-    if (ImageUtils.photoPicker) {
-      ImageUtils.photoPicker = null
-    }
     if (ImageUtils.photoSession) {
       ImageUtils.photoSession = null
     }
@@ -578,5 +634,11 @@ export class ImageUtils {
     if (ImageUtils.photoOutput) {
       ImageUtils.photoOutput = null
     }
+    
+    // 清理相册选择相关状态
+    ImageUtils.selectedUris = [];
+    ImageUtils.currentUri = '';
+    ImageUtils.isBrowserShow = false;
+    ImageUtils.selectionCallback = null;
   }
 }

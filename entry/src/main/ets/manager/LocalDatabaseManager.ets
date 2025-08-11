@@ -2,6 +2,21 @@ import { DocumentItem } from '../model/DocumentItem'
 import { DocumentTypeInfo } from '../types/DocumentRecognition'
 import { preferences } from '@kit.ArkData'
 
+// 定义 JSON 接口
+interface DocumentItemJSON {
+  id?: string
+  name?: string
+  type?: string
+  number?: string
+  expiryDate?: string
+  imageUrl?: string
+  createTime?: string
+  updateTime?: string
+  dynamicFields?: Record<string, string>
+  recognitionConfidence?: number
+  originalImagePath?: string
+}
+
 export class LocalDatabaseManager {
   private static readonly DOCUMENTS_KEY = 'documents'
   private static readonly DOCUMENT_TYPES_KEY = 'document_types'
@@ -61,21 +76,32 @@ export class LocalDatabaseManager {
       }
 
       const documentsJSON = await this.preferencesHelper.get(LocalDatabaseManager.DOCUMENTS_KEY, '[]')
-      const documentsArray = JSON.parse(documentsJSON as string)
-      
-      const documents = documentsArray.map((doc: {
-        id?: string
-        name?: string
-        type?: string
-        number?: string
-        expiryDate?: string
-        imageUrl?: Resource
-        createTime?: string
-        updateTime?: string
-        dynamicFields?: Record<string, string>
-        recognitionConfidence?: number
-        originalImagePath?: string
-      }) => DocumentItem.fromJSON(doc))
+      const documentsArray = JSON.parse(documentsJSON as string) as DocumentItemJSON[]
+
+      const documents = documentsArray.map((json) => {
+        const dynamicFields = new Map<string, string>()
+        if (json.dynamicFields) {
+          Object.keys(json.dynamicFields).forEach(key => {
+            dynamicFields.set(key, json.dynamicFields![key])
+          })
+        }
+
+        const item = new DocumentItem(
+          json.id || '',
+          json.name || '',
+          json.type || '',
+          json.number || '',
+          json.expiryDate || '',
+          json.imageUrl || '',
+          new Date(json.createTime || Date.now()),
+          new Date(json.updateTime || Date.now()),
+          dynamicFields,
+          json.recognitionConfidence || 0,
+          json.originalImagePath || ''
+        )
+        return item
+      })
+
       console.log('文档加载成功，共加载', documents.length, '个文档')
       return documents
     } catch (error) {
@@ -176,12 +202,15 @@ export class LocalDatabaseManager {
       })
 
       // 转换为DocumentTypeInfo数组
-      const documentTypes: DocumentTypeInfo[] = Array.from(typeCount.entries()).map(([type, count]) => ({
-        type,
-        displayName: type,
-        icon: this.getDocumentTypeIcon(type),
-        count
-      }))
+      const documentTypes: DocumentTypeInfo[] = []
+      typeCount.forEach((count, type) => {
+        documentTypes.push({
+          type,
+          displayName: type,
+          icon: this.getDocumentTypeIcon(type),
+          count
+        })
+      })
 
       // 保存文档类型信息
       if (this.preferencesHelper) {
@@ -201,7 +230,7 @@ export class LocalDatabaseManager {
       }
 
       const typesJSON = await this.preferencesHelper.get(LocalDatabaseManager.DOCUMENT_TYPES_KEY, '[]')
-      const types = JSON.parse(typesJSON as string)
+      const types = JSON.parse(typesJSON as string) as DocumentTypeInfo[]
       return types
     } catch (error) {
       console.error('获取文档类型失败:', error)
@@ -211,14 +240,15 @@ export class LocalDatabaseManager {
 
   // 获取文档类型图标
   private getDocumentTypeIcon(type: string): string {
-    const iconMap: { [key: string]: string } = {
+    const iconMap: Record<string, string> = {
       '身份证': '🆔',
       '护照': '📘',
       '驾驶证': '🚗',
       '银行卡': '💳',
       '其他': '📄'
     }
-    return iconMap[type] || '📄'
+    const icon = iconMap[type]
+    return icon || '📄'
   }
 
   // 清空所有数据

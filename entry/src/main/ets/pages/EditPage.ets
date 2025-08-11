@@ -1,5 +1,6 @@
 import { DocumentItem } from '../model/DocumentItem'
 import { DocumentEditParams } from '../types/RouterParams'
+import image from '@kit.ImageKit'
 
 @Entry
 @Component
@@ -33,7 +34,7 @@ struct EditPage {
           this.documentData.documentType || '',
           this.documentData.documentNumber || '',
           this.documentData.documentExpiry || '',
-          this.documentData.documentImage || $r('app.media.background'),
+          this.documentData.documentImage || '',
           new Date(),
           new Date()
         )
@@ -71,7 +72,7 @@ struct EditPage {
 
       // 图片编辑区域
       Stack() {
-        Image(this.document?.imageUrl || $r('app.media.background'))
+        Image(this.document?.imageUrl ? this.document.imageUrl : $r('app.media.background'))
           .width('100%')
           .height(400)
           .objectFit(ImageFit.Cover)

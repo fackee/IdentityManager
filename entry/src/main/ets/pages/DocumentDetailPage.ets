@@ -1,6 +1,7 @@
 import { DocumentItem } from '../model/DocumentItem'
 import router from '@ohos.router'
 import { DocumentDetailParams } from '../types/RouterParams'
+import image from '@kit.ImageKit'
 
 @Entry
 @Component
@@ -52,7 +53,7 @@ struct DocumentDetailPage {
 
       if (this.document) {
         // 证件图片
-        Image(this.document.imageUrl)
+        Image(this.document.imageUrl ? this.document.imageUrl : $r('app.media.background'))
           .width('100%')
           .height(300)
           .objectFit(ImageFit.Cover)

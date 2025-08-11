@@ -1,10 +1,12 @@
+import { HashMap } from "@kit.ArkTS"
+
 export class DocumentItem {
   id: string
   name: string
   type: string
   number: string
   expiryDate: string
-  imageUrl: Resource
+  imageUrl: string
   createTime: Date
   updateTime: Date
   // 新增字段：动态表单数据
@@ -20,7 +22,7 @@ export class DocumentItem {
     type: string = '',
     number: string = '',
     expiryDate: string = '',
-    imageUrl: Resource = $r('app.media.background'),
+    imageUrl: string = '',
     createTime: Date = new Date(),
     updateTime: Date = new Date(),
     dynamicFields: Map<string, string> = new Map(),
@@ -51,13 +53,22 @@ export class DocumentItem {
   }
 
   // 获取所有动态字段
-  getAllDynamicFields(): Array<{key: string, value: string}> {
-    return Array.from(this.dynamicFields.entries()).map(([key, value]) => ({key, value}))
+  getAllDynamicFields(): Array<DynamicFieldItem> {
+    const result: Array<DynamicFieldItem> = []
+    this.dynamicFields.forEach((value, key) => {
+      result.push({key, value})
+    })
+    return result
   }
 
   // 转换为JSON对象（用于存储）
-  toJSON(): object {
-    return {
+  toJSON(): DocumentItemJSON {
+    const dynamicFieldsObj: Record<string, string> = {}
+    this.dynamicFields.forEach((value, key) => {
+      dynamicFieldsObj[key] = value
+    })
+    
+    const result: DocumentItemJSON = {
       id: this.id,
       name: this.name,
       type: this.type,
@@ -66,39 +77,56 @@ export class DocumentItem {
       imageUrl: this.imageUrl,
       createTime: this.createTime.toISOString(),
       updateTime: this.updateTime.toISOString(),
-      dynamicFields: Object.fromEntries(this.dynamicFields),
+      dynamicFields: dynamicFieldsObj,
       recognitionConfidence: this.recognitionConfidence,
       originalImagePath: this.originalImagePath
     }
+    return result
   }
 
   // 从JSON对象创建DocumentItem
-  static fromJSON(json: {
-    id?: string
-    name?: string
-    type?: string
-    number?: string
-    expiryDate?: string
-    imageUrl?: Resource
-    createTime?: string
-    updateTime?: string
-    dynamicFields?: Record<string, string>
-    recognitionConfidence?: number
-    originalImagePath?: string
-  }): DocumentItem {
+  static fromJSON(json: DocumentItemJSON): DocumentItem {
+    const dynamicFields = new Map<string, string>()
+    if (json.dynamicFields) {
+      Object.keys(json.dynamicFields).forEach(key => {
+        dynamicFields.set(key, json.dynamicFields![key])
+      })
+    }
+    
     const item = new DocumentItem(
       json.id || '',
       json.name || '',
       json.type || '',
       json.number || '',
       json.expiryDate || '',
-      json.imageUrl || $r('app.media.background'),
+      json.imageUrl || '',
       new Date(json.createTime || Date.now()),
       new Date(json.updateTime || Date.now()),
-      new Map(Object.entries(json.dynamicFields || {})),
+      dynamicFields,
       json.recognitionConfidence || 0,
       json.originalImagePath || ''
     )
     return item
   }
+}
+
+// 定义动态字段项接口
+interface DynamicFieldItem {
+  key: string
+  value: string
+}
+
+// 定义 JSON 接口
+interface DocumentItemJSON {
+  id?: string
+  name?: string
+  type?: string
+  number?: string
+  expiryDate?: string
+  imageUrl?: string
+  createTime?: string
+  updateTime?: string
+  dynamicFields?: Record<string, string>
+  recognitionConfidence?: number
+  originalImagePath?: string
 } 
