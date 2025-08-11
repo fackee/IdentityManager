@@ -236,18 +236,57 @@ struct UploadPage {
         .justifyContent(FlexAlign.Center)
       } else if (this.recognitionResult && this.recognitionResult.success) {
         Column() {
-          // 文档类型和置信度
-          Row() {
-            Text(`文档类型: ${this.documentType}`)
-              .fontSize(16)
-              .fontWeight(FontWeight.Medium)
-            Blank()
-            Text(`置信度: ${(this.confidence * 100).toFixed(1)}%`)
-              .fontSize(14)
-              .fontColor('#666666')
-          }
-          .width('100%')
-          .margin({ bottom: 20 })
+          // 检查是否为非证件
+          if (this.documentType === '非证件') {
+            Column() {
+              Text('⚠️ 非证件图片')
+                .fontSize(18)
+                .fontColor('#FF6B35')
+                .fontWeight(FontWeight.Bold)
+                .margin({ bottom: 16 })
+              
+              Text(this.recognitionResult.error || '上传的图片不是证件')
+                .fontSize(14)
+                .fontColor('#666666')
+                .textAlign(TextAlign.Center)
+                .margin({ bottom: 30 })
+              
+              Row() {
+                Button('重新选择')
+                  .width(120)
+                  .height(48)
+                  .backgroundColor('#F0F0F0')
+                  .fontColor('#666666')
+                  .margin({ right: 20 })
+                  .onClick(() => {
+                    this.currentStep = 0
+                  })
+                
+                Button('返回')
+                  .width(120)
+                  .height(48)
+                  .backgroundColor('#007DFF')
+                  .fontColor(Color.White)
+                  .onClick(() => {
+                    this.goBack()
+                  })
+              }
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.Center)
+          } else {
+            // 文档类型和置信度
+            Row() {
+              Text(`文档类型: ${this.documentType}`)
+                .fontSize(16)
+                .fontWeight(FontWeight.Medium)
+              Blank()
+              Text(`置信度: ${(this.confidence * 100).toFixed(1)}%`)
+                .fontSize(14)
+                .fontColor('#666666')
+            }
+            .width('100%')
+            .margin({ bottom: 20 })
 
           // 动态表单字段
           Column() {
@@ -444,13 +483,28 @@ struct UploadPage {
 
   private async saveDocument() {
     try {
+      // 检查是否为证件
+      if (this.documentType === '非证件' || this.documentType === '其他') {
+        this.getUIContext().showAlertDialog({
+          title: '无法保存',
+          message: '只有有效的证件才能保存到证件管理器中',
+          primaryButton: {
+            value: '确定',
+            action: () => {
+              console.log('用户确认无法保存')
+            }
+          }
+        })
+        return
+      }
+      
       // 创建文档对象
       const document = new DocumentItem(
         '', // ID将由数据库管理器生成
         this.documentType, // 使用识别出的文档类型作为名称
         this.documentType,
-        this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || '',
-        this.dynamicFields.get('有效期限') || this.dynamicFields.get('有效期至') || '',
+        this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || this.dynamicFields.get('证号') || this.dynamicFields.get('编号') || '',
+        this.dynamicFields.get('有效期限') || this.dynamicFields.get('有效期至') || this.dynamicFields.get('有效期') || '',
         $r('app.media.background'), // 暂时使用默认图片
         new Date(),
         new Date(),
@@ -499,6 +553,8 @@ struct UploadPage {
       })
     }
   }
+
+
 
   private goBack() {
     this.getUIContext().getRouter().back()
