@@ -1,5 +1,4 @@
-import router from '@ohos.router'
-import { CommonUtils } from '../utils/CommonUtils'
+import { CommonUtils,UserSetting } from '../utils/CommonUtils'
 import { DocumentRecognitionService } from '../services/DocumentRecognitionService'
 
 @Entry
@@ -11,15 +10,7 @@ struct SettingsPage {
   
   @State proxyStatus: boolean = false
   
-  @State userSettings: {
-    autoSave: boolean
-    imageQuality: number
-    enableBackup: boolean
-  } = {
-    autoSave: true,
-    imageQuality: 0.8,
-    enableBackup: true
-  }
+  @State userSettings: UserSetting = new UserSetting(true, 0.8, true)
   
   @State isLoading: boolean = false
   @State showApiKey: boolean = false

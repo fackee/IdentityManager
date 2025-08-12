@@ -1,57 +1,27 @@
-import preferences from '@kit.PreferencesKit'
+import { preferences } from '@kit.ArkData'
+
+export class UserSetting {
+  autoSave: boolean;
+  imageQuality: number;
+  enableBackup: boolean;
+
+  constructor(autoSave: boolean, imageQuality: number,  enableBackup: boolean) {
+    this.autoSave = autoSave;
+    this.imageQuality = imageQuality;
+    this.enableBackup = enableBackup;
+  }
+}
 
 export class CommonUtils {
   private static readonly PREFERENCES_NAME = 'IdentityManager'
-  private static readonly API_CONFIG_KEY = 'api_config'
   private static readonly USER_SETTINGS_KEY = 'user_settings'
 
-  // 保存API配置
-  static async saveAPIConfig(config: {
-    baseUrl: string
-    apiKey: string
-    model: string
-  }): Promise<boolean> {
-    try {
-      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
-      await preferencesHelper.put(this.API_CONFIG_KEY, JSON.stringify(config))
-      await preferencesHelper.flush()
-      console.log('API配置保存成功')
-      return true
-    } catch (error) {
-      console.error('保存API配置失败:', error)
-      return false
-    }
-  }
-
-  // 获取API配置
-  static async getAPIConfig(): Promise<{
-    baseUrl: string
-    apiKey: string
-    model: string
-  } | null> {
-    try {
-      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
-      const configString = await preferencesHelper.get(this.API_CONFIG_KEY, '')
-      
-      if (configString) {
-        return JSON.parse(configString)
-      }
-      return null
-    } catch (error) {
-      console.error('获取API配置失败:', error)
-      return null
-    }
-  }
 
   // 保存用户设置
-  static async saveUserSettings(settings: {
-    autoSave: boolean
-    imageQuality: number
-    enableBackup: boolean
-  }): Promise<boolean> {
+  static async saveUserSettings(settings: UserSetting): Promise<boolean> {
     try {
-      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
-      await preferencesHelper.put(this.USER_SETTINGS_KEY, JSON.stringify(settings))
+      const preferencesHelper = await preferences.getPreferences(getContext(), CommonUtils.PREFERENCES_NAME)
+      await preferencesHelper.put(CommonUtils.USER_SETTINGS_KEY, JSON.stringify(settings))
       await preferencesHelper.flush()
       console.log('用户设置保存成功')
       return true
@@ -62,39 +32,28 @@ export class CommonUtils {
   }
 
   // 获取用户设置
-  static async getUserSettings(): Promise<{
-    autoSave: boolean
-    imageQuality: number
-    enableBackup: boolean
-  }> {
+  static async getUserSettings(): Promise<UserSetting> {
     try {
-      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
-      const settingsString = await preferencesHelper.get(this.USER_SETTINGS_KEY, '')
+      const preferencesHelper = await preferences.getPreferences(getContext(), CommonUtils.PREFERENCES_NAME)
+      const settingsString = await preferencesHelper.get(CommonUtils.USER_SETTINGS_KEY, '')
       
-      if (settingsString) {
-        return JSON.parse(settingsString)
+      if (settingsString && typeof settingsString === 'string') {
+        const settingsObj = JSON.parse(settingsString) as UserSetting
+        return new UserSetting(settingsObj.autoSave, settingsObj.imageQuality, settingsObj.enableBackup)
       }
       
       // 返回默认设置
-      return {
-        autoSave: true,
-        imageQuality: 0.8,
-        enableBackup: true
-      }
+      return new UserSetting(true, 0.8, true)
     } catch (error) {
       console.error('获取用户设置失败:', error)
-      return {
-        autoSave: true,
-        imageQuality: 0.8,
-        enableBackup: true
-      }
+      return new UserSetting(true, 0.8, true)
     }
   }
 
   // 清除所有配置
   static async clearAllConfig(): Promise<boolean> {
     try {
-      const preferencesHelper = await preferences.getPreferences(getContext(), this.PREFERENCES_NAME)
+      const preferencesHelper = await preferences.getPreferences(getContext(), CommonUtils.PREFERENCES_NAME)
       await preferencesHelper.clear()
       await preferencesHelper.flush()
       console.log('所有配置已清除')
@@ -153,63 +112,5 @@ export class CommonUtils {
       result += chars.charAt(Math.floor(Math.random() * chars.length))
     }
     return result
-  }
-
-  // 深拷贝对象
-  static deepClone<T>(obj: T): T {
-    if (obj === null || typeof obj !== 'object') {
-      return obj
-    }
-    
-    if (obj instanceof Date) {
-      return new Date(obj.getTime()) as unknown as T
-    }
-    
-    if (obj instanceof Array) {
-      return obj.map(item => this.deepClone(item)) as unknown as T
-    }
-    
-    if (typeof obj === 'object') {
-      const clonedObj = {} as T
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          clonedObj[key] = this.deepClone(obj[key])
-        }
-      }
-      return clonedObj
-    }
-    
-    return obj
-  }
-
-  // 防抖函数
-  static debounce<T extends (...args: any[]) => any>(
-    func: T,
-    wait: number
-  ): (...args: Parameters<T>) => void {
-    let timeout: number | null = null
-    
-    return (...args: Parameters<T>) => {
-      if (timeout) {
-        clearTimeout(timeout)
-      }
-      timeout = setTimeout(() => func(...args), wait) as unknown as number
-    }
-  }
-
-  // 节流函数
-  static throttle<T extends (...args: any[]) => any>(
-    func: T,
-    limit: number
-  ): (...args: Parameters<T>) => void {
-    let inThrottle: boolean = false
-    
-    return (...args: Parameters<T>) => {
-      if (!inThrottle) {
-        func(...args)
-        inThrottle = true
-        setTimeout(() => inThrottle = false, limit)
-      }
-    }
   }
 } 

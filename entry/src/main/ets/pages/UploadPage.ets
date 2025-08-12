@@ -2,11 +2,11 @@ import { DocumentItem } from '../model/DocumentItem'
 import { DocumentType } from '../model/DocumentType'
 import { ImageUtils } from '../utils/ImageUtils'
 import { DocumentRecognitionService } from '../services/DocumentRecognitionService'
-import { LocalDatabaseManager } from '../manager/LocalDatabaseManager'
+import { DocumentDatabaseManager } from '../manager/DocumentDatabaseManager'
 import { RecognitionResponse, RecognitionField, UploadPageParams,
   ImageSelectionResult } from '../types/DocumentRecognition'
 import { PermissionUtils } from '../utils/PermissionUtils'
-import image from '@kit.ImageKit'
+
 import {
   PhotoPickerComponent,
   PickerController,
@@ -44,7 +44,7 @@ struct UploadPage {
   @State currentUri: string = ''
   @State isBrowserShow: boolean = false
 
-  private databaseManager: LocalDatabaseManager = LocalDatabaseManager.getInstance()
+  private documentDatabaseManager: DocumentDatabaseManager = DocumentDatabaseManager.getInstance()
 
   // 获取Context的辅助方法
   private getContext(): Context | undefined {
@@ -55,7 +55,7 @@ struct UploadPage {
 
   aboutToAppear() {
     // 初始化数据库
-    this.databaseManager.initialize(getContext())
+    this.documentDatabaseManager.initialize(getContext())
     
     // 初始化相册选择器
     this.initializePhotoPicker()
@@ -683,12 +683,17 @@ struct UploadPage {
       // 如果是从相册选择的图片（有imagePath但没有imageBase64），需要将图片转换为base64
       if (this.imagePath && !this.imageBase64) {
         try {
-          imageData = await ImageUtils.convertImageUriToBase64(this.imagePath)
+          // 调试URI信息
+          await ImageUtils.debugUriInfo(this.imagePath)
+          
+          // 使用专门处理相册图片的方法
+          const context = this.getContext()
+          imageData = await ImageUtils.convertGalleryImageToBase64(this.imagePath, context)
         } catch (error) {
           console.error('图片转换失败:', error)
           this.getUIContext().showAlertDialog({
             title: '错误',
-            message: '图片转换失败',
+            message: `图片转换失败: ${error instanceof Error ? error.message : '未知错误'}`,
             primaryButton: {
               value: '确定',
               action: () => {
@@ -748,7 +753,7 @@ struct UploadPage {
        )
 
       // 保存到数据库
-      const success = await this.databaseManager.addDocument(document)
+      const success = await this.documentDatabaseManager.addDocument(document)
       
       if (success) {
         this.getUIContext().showAlertDialog({
@@ -790,6 +795,7 @@ struct UploadPage {
 
   private confirmPhotoSelection() {
     if (this.selectedUris.length > 0) {
+      console.log('选择的图片URI:', this.selectedUris[0])
       this.imagePath = this.selectedUris[0];
       this.imageBase64 = ''; // 清空base64，因为图片已经加载到imagePath
       this.currentStep = 1;

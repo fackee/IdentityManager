@@ -1,6 +1,6 @@
 import { DocumentItem } from '../model/DocumentItem'
 import { DocumentUtils } from '../utils/DocumentUtils'
-import { LocalDatabaseManager } from '../manager/LocalDatabaseManager'
+import { DocumentDatabaseManager } from '../manager/DocumentDatabaseManager'
 import { DocumentTypeInfo } from '../types/DocumentRecognition'
 
 @Entry
@@ -13,7 +13,7 @@ struct Index {
   @State tabs: string[] = ['全部']
   @State isLoading: boolean = false
   
-  private databaseManager: LocalDatabaseManager = LocalDatabaseManager.getInstance()
+  private documentDatabaseManager: DocumentDatabaseManager = DocumentDatabaseManager.getInstance()
 
   aboutToAppear() {
     this.initializeData()
@@ -22,9 +22,6 @@ struct Index {
   async initializeData() {
     try {
       this.isLoading = true
-      
-      // 初始化数据库
-      await this.databaseManager.initialize(getContext())
       
       // 加载文档类型
       await this.loadDocumentTypes()
@@ -41,7 +38,7 @@ struct Index {
 
   async loadDocumentTypes() {
     try {
-      const types = await this.databaseManager.getDocumentTypes()
+      const types = await this.documentDatabaseManager.getDocumentTypes()
       
       // 构建标签页数组：全部 + 动态类型
       this.tabs = ['全部']
@@ -63,9 +60,9 @@ struct Index {
       let documents: DocumentItem[] = []
       
       if (currentType === '全部') {
-        documents = await this.databaseManager.loadDocuments()
+        documents = await this.documentDatabaseManager.loadDocuments()
       } else {
-        documents = await this.databaseManager.getDocumentsByType(currentType)
+        documents = await this.documentDatabaseManager.getDocumentsByType(currentType)
       }
       
       // 如果有搜索文本，进行过滤
