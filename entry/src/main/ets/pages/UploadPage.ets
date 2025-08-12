@@ -7,6 +7,21 @@ import { RecognitionResponse, RecognitionField, UploadPageParams,
   ImageSelectionResult } from '../types/DocumentRecognition'
 import { PermissionUtils } from '../utils/PermissionUtils'
 import image from '@kit.ImageKit'
+import {
+  PhotoPickerComponent,
+  PickerController,
+  PickerOptions,
+  DataType,
+  BaseItemInfo,
+  ItemInfo,
+  PhotoBrowserInfo,
+  ItemType,
+  ClickType,
+  MaxCountType,
+  PhotoBrowserRange,
+  ReminderMode,
+  photoAccessHelper
+} from '@kit.MediaLibraryKit';
 
 @Entry
 @Component
@@ -21,17 +36,113 @@ struct UploadPage {
   @State documentType: string = ''
   @State confidence: number = 0
 
+  // 相册选择相关状态
+  @State showPhotoPicker: boolean = false
+  @State pickerOptions: PickerOptions = new PickerOptions()
+  @State pickerController: PickerController = new PickerController()
+  @State selectedUris: Array<string> = new Array<string>()
+  @State currentUri: string = ''
+  @State isBrowserShow: boolean = false
+
   private databaseManager: LocalDatabaseManager = LocalDatabaseManager.getInstance()
+
+  // 获取Context的辅助方法
+  private getContext(): Context | undefined {
+    let uiContext: UIContext = this.getUIContext();
+    let context: Context | undefined = uiContext.getHostContext();
+    return context;
+  }
 
   aboutToAppear() {
     // 初始化数据库
     this.databaseManager.initialize(getContext())
+    
+    // 初始化相册选择器
+    this.initializePhotoPicker()
     
     // 检查是否有传入的参数
     const params = this.getUIContext().getRouter().getParams() as UploadPageParams
     if (params?.mode) {
       this.selectUploadMethod(params.mode)
     }
+  }
+
+  // 初始化相册选择器
+  private initializePhotoPicker(): void {
+    // 设置picker宫格页数据类型
+    this.pickerOptions.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_VIDEO_TYPE // 图片和照片都显示。
+    // 最大选择数量。
+    this.pickerOptions.maxSelectNumber = 1;
+    // 超出最大选择数量时。
+    this.pickerOptions.maxSelectedReminderMode = ReminderMode.TOAST;
+    // 是否展示搜索框，默认false。
+    this.pickerOptions.isSearchSupported = true;
+    // 是否支持拍照，默认false。
+    this.pickerOptions.isPhotoTakingSupported = true;
+  }
+
+  // 资源被选中回调，返回资源的信息，以及选中方式。
+  private onItemClicked(itemInfo: ItemInfo, clickType: ClickType): boolean {
+    if (!itemInfo) {
+      return false;
+    }
+    let type: ItemType | undefined = itemInfo.itemType;
+    let uri: string | undefined = itemInfo.uri;
+    if (type === ItemType.CAMERA) {
+      // 点击相机item。
+      return true; // 返回true则拉起系统相机，若应用需要自行处理则返回false。
+    } else {
+      if (clickType === ClickType.SELECTED) {
+        // 应用做自己的业务处理。
+        if (uri) {
+          this.selectedUris.push(uri);
+          this.pickerOptions.preselectedUris = [...this.selectedUris];
+        }
+        return true; // 返回true则勾选，否则则不响应勾选。
+      } else {
+        if (uri) {
+          this.selectedUris = this.selectedUris.filter((item: string) => {
+            return item != uri;
+          });
+          this.pickerOptions.preselectedUris = [...this.selectedUris];
+        }
+      }
+      return true;
+    }
+  }
+
+  // 进入大图的回调。
+  private onEnterPhotoBrowser(photoBrowserInfo: PhotoBrowserInfo): boolean {
+    this.isBrowserShow = true;
+    return true;
+  }
+
+  // 退出大图的回调。
+  private onExitPhotoBrowser(photoBrowserInfo: PhotoBrowserInfo): boolean {
+    this.isBrowserShow = false;
+    return true;
+  }
+
+  // 接收到该回调后，便可通过pickerController相关接口向picker发送数据，在此之前不生效。
+  private onPickerControllerReady(): void {
+  }
+
+  // 大图左右滑动的回调。
+  private onPhotoBrowserChanged(browserItemInfo: BaseItemInfo): boolean {
+    this.currentUri = browserItemInfo.uri ?? '';
+    return true;
+  }
+
+  // 已勾选图片被删除时的回调。
+  private onSelectedItemsDeleted(baseItemInfos: Array<BaseItemInfo>): void {
+  }
+
+  // 超过最大选择数量再次点击时的回调。
+  private onExceedMaxSelected(exceedMaxCountType: MaxCountType): void {
+  }
+
+  // 当前相册被删除时的回调。
+  private onCurrentAlbumDeleted(): void {
   }
 
   build() {
@@ -78,6 +189,98 @@ struct UploadPage {
       } else if (this.currentStep === 3) {
         this.RecognitionResult()
       }
+
+      // 相册选择组件
+      if (this.showPhotoPicker) {
+        Stack() {
+          // 半透明背景
+          Column()
+            .width('100%')
+            .height('100%')
+            .backgroundColor('#00000080')
+            .onClick(() => {
+              this.showPhotoPicker = false
+            })
+
+          // 相册选择器
+          Column() {
+            // 顶部工具栏
+            Row() {
+              Button('取消')
+                .onClick(() => {
+                  this.showPhotoPicker = false
+                })
+              
+              Text('选择图片')
+                .fontSize(18)
+                .fontWeight(FontWeight.Medium)
+                .margin({ left: 16 })
+
+              Blank()
+
+              Button('确定')
+                .backgroundColor('#007DFF')
+                .fontColor(Color.White)
+                .onClick(() => {
+                  this.confirmPhotoSelection()
+                })
+            }
+            .width('100%')
+            .padding({ left: 20, right: 20, top: 12, bottom: 12 })
+
+            // 相册选择组件
+            PhotoPickerComponent({
+              pickerOptions: this.pickerOptions,
+              onItemClicked: (itemInfo: ItemInfo, clickType: ClickType): boolean => this.onItemClicked(itemInfo, clickType),
+              onEnterPhotoBrowser: (photoBrowserInfo: PhotoBrowserInfo): boolean => this.onEnterPhotoBrowser(photoBrowserInfo),
+              onExitPhotoBrowser: (photoBrowserInfo: PhotoBrowserInfo): boolean => this.onExitPhotoBrowser(photoBrowserInfo),
+              onPickerControllerReady: (): void => this.onPickerControllerReady(),
+              onPhotoBrowserChanged: (browserItemInfo: BaseItemInfo): boolean => this.onPhotoBrowserChanged(browserItemInfo),
+              onSelectedItemsDeleted: (BaseItemInfo: Array<BaseItemInfo>) => this.onSelectedItemsDeleted(BaseItemInfo),
+              onExceedMaxSelected: (exceedMaxCountType: MaxCountType) => this.onExceedMaxSelected(exceedMaxCountType),
+              onCurrentAlbumDeleted: () => this.onCurrentAlbumDeleted(),
+              pickerController: this.pickerController,
+            })
+            .width('100%')
+            .height('80%')
+
+            // 底部选择栏
+            if (this.isBrowserShow) {
+              // 已选择的图片缩略图。
+              Row() {
+                ForEach(this.selectedUris, (uri: string) => {
+                  if (uri === this.currentUri) {
+                    Image(uri).height(50).width(50)
+                      .onClick(() => {
+                      })
+                      .borderWidth(1)
+                      .borderColor('red')
+                  } else {
+                    Image(uri).height(50).width(50).onClick(() => {
+                      this.pickerController.setData(DataType.SET_SELECTED_URIS, this.selectedUris);
+                      this.pickerController.setPhotoBrowserItem(uri, PhotoBrowserRange.ALL);
+                    })
+                  }
+                }, (uri: string) => JSON.stringify(uri))
+              }.alignSelf(ItemAlign.Center).margin(this.selectedUris.length ? 10 : 0)
+            } else {
+              // 进入大图，预览已选择的图片。
+              Button('预览').width('33%').alignSelf(ItemAlign.Start).height('5%').margin(10).onClick(() => {
+                if (this.selectedUris.length > 0) {
+                  this.pickerController.setPhotoBrowserItem(this.selectedUris[0], PhotoBrowserRange.SELECTED_ONLY);
+                }
+              })
+            }
+          }
+          .width('100%')
+          .height('100%')
+          .backgroundColor(Color.White)
+        }
+        .width('100%')
+        .height('100%')
+        .position({ x: 0, y: 0 })
+        .zIndex(1000)
+      }
     }
     .width('100%')
     .height('100%')
@@ -108,8 +311,25 @@ struct UploadPage {
         .backgroundColor(Color.White)
         .fontColor('#007DFF')
         .border({ width: 2, color: '#007DFF' })
-        .onClick(() => {
-          this.selectUploadMethod('gallery')
+        .onClick(async () => {
+          // 检查存储权限
+          const hasPermission = await PermissionUtils.requestStoragePermission()
+          if (!hasPermission) {
+            this.getUIContext().showAlertDialog({
+              title: '权限错误',
+              message: '没有存储权限，无法访问相册',
+              primaryButton: {
+                value: '确定',
+                action: () => {
+                  console.log('用户确认权限错误')
+                }
+              }
+            })
+            return
+          }
+          
+          // 显示相册选择器
+          this.showPhotoPicker = true
         })
     }
     .width('100%')
@@ -358,9 +578,23 @@ struct UploadPage {
     
     try {
       if (method === 'camera') {
-        // 对于拍照，我们需要提供一个surfaceId，这里暂时使用空字符串
-        // 在实际应用中，应该从相机预览组件获取surfaceId
-        const result = await ImageUtils.takePhoto(getContext(), '')
+        // 使用新的cameraPicker API进行拍照
+        const context = this.getContext();
+        if (!context) {
+          this.getUIContext().showAlertDialog({
+            title: '错误',
+            message: '无法获取应用上下文',
+            primaryButton: {
+              value: '确定',
+              action: () => {
+                console.log('用户确认错误')
+              }
+            }
+          })
+          return;
+        }
+        
+        const result = await ImageUtils.takePhoto(context)
         if (result?.success && result.imagePath) {
           this.imagePath = result.imagePath
           this.imageBase64 = result.imageBase64 || ''
@@ -395,39 +629,8 @@ struct UploadPage {
           return
         }
         
-        // 使用系统相册选择
-        try {
-          const result = await ImageUtils.selectFromGallery(getContext())
-          if (result.success) {
-            // 模拟选择成功，显示一个示例图片
-            this.imagePath = $r('app.media.background').bundleName
-            this.imageBase64 = '示例图片数据'
-            this.currentStep = 1
-          } else {
-            this.getUIContext().showAlertDialog({
-              title: '错误',
-              message: result.error || '选择图片失败',
-              primaryButton: {
-                value: '确定',
-                action: () => {
-                  console.log('用户确认错误')
-                }
-              }
-            })
-          }
-        } catch (error) {
-          console.error('相册选择失败:', error)
-          this.getUIContext().showAlertDialog({
-            title: '错误',
-            message: '相册选择失败',
-            primaryButton: {
-              value: '确定',
-              action: () => {
-                console.log('用户确认错误')
-              }
-            }
-          })
-        }
+        // 显示相册选择器
+        this.showPhotoPicker = true
       } else {
         // 显示错误信息
         this.getUIContext().showAlertDialog({
@@ -457,7 +660,7 @@ struct UploadPage {
   }
 
   private async startRecognition() {
-    if (!this.imageBase64) {
+    if (!this.imagePath && !this.imageBase64) {
       this.getUIContext().showAlertDialog({
         title: '错误',
         message: '没有可识别的图片',
@@ -475,8 +678,31 @@ struct UploadPage {
     this.isProcessing = true
 
     try {
+      let imageData = this.imageBase64
+      
+      // 如果是从相册选择的图片（有imagePath但没有imageBase64），需要将图片转换为base64
+      if (this.imagePath && !this.imageBase64) {
+        try {
+          imageData = await ImageUtils.convertImageUriToBase64(this.imagePath)
+        } catch (error) {
+          console.error('图片转换失败:', error)
+          this.getUIContext().showAlertDialog({
+            title: '错误',
+            message: '图片转换失败',
+            primaryButton: {
+              value: '确定',
+              action: () => {
+                console.log('用户确认错误')
+              }
+            }
+          })
+          this.isProcessing = false
+          return
+        }
+      }
+
       // 调用识别服务
-      const result = await DocumentRecognitionService.recognizeDocument(this.imageBase64)
+      const result = await DocumentRecognitionService.recognizeDocument(imageData)
       
       this.recognitionResult = result
       this.isProcessing = false
@@ -562,7 +788,18 @@ struct UploadPage {
     }
   }
 
-
+  private confirmPhotoSelection() {
+    if (this.selectedUris.length > 0) {
+      this.imagePath = this.selectedUris[0];
+      this.imageBase64 = ''; // 清空base64，因为图片已经加载到imagePath
+      this.currentStep = 1;
+      this.showPhotoPicker = false;
+      this.selectedUris = []; // 清空已选择的图片
+      this.pickerOptions.preselectedUris = []; // 清空预选的图片
+    } else {
+      this.showPhotoPicker = false;
+    }
+  }
 
   private goBack() {
     this.getUIContext().getRouter().back()
