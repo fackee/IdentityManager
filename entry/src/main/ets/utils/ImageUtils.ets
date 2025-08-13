@@ -15,22 +15,26 @@ class MediaDataHandler implements photoAccessHelper.MediaAssetDataHandler<ArrayB
   constructor(resolve: (value: string) => void, reject: (reason: Error) => void) {
     this.resolve = resolve
     this.reject = reject
+    
+    // 绑定方法以保持this上下文
+    this.onDataPrepared = this.onDataPrepared.bind(this)
+    this.onError = this.onError.bind(this)
   }
 
-  onDataPrepared(imageData: ArrayBuffer): void {
+  onDataPrepared = (imageData: ArrayBuffer): void => {
     try {
       console.log('接收到图片数据，大小:', imageData.byteLength)
       let base64 = new util.Base64Helper
       let arrayStr = base64.encodeToStringSync(new Uint8Array(imageData))
-      console.log('图片数据转换为base64成功，长度:', arrayStr.length)
-      this.resolve(`data:image/jpg;base64,${arrayStr}`)
+      console.log('图片数据转换为base64成功, 大小', `${arrayStr.length}`)
+      this.resolve(`${arrayStr}`)
     } catch (error) {
       console.error('图片数据转换失败:', error)
       this.reject(new Error(`图片数据转换失败: ${error instanceof Error ? error.message : '未知错误'}`))
     }
   }
 
-  onError(error: Error): void {
+  onError = (error: Error): void => {
     console.error('MediaDataHandler错误:', error)
     this.reject(error)
   }
@@ -189,7 +193,7 @@ export class ImageUtils {
 
   // 处理相册图片URI转换为base64（专门处理MediaLibraryKit返回的URI）
   static async convertGalleryImageToBase64(uri: string, context?: Context): Promise<string> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       try {
         if (!uri || uri.trim() === '') {
           reject(new Error('无效的图片URI'))
@@ -209,49 +213,59 @@ export class ImageUtils {
         const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(appContext)
         
         // 使用新的API获取图片数据
-        try {
-          // 创建查询条件
-          let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates()
-          predicates.equalTo(photoAccessHelper.PhotoKeys.URI, uri)
-          
-          // 设置查询选项
-          let fetchOptions: photoAccessHelper.FetchOptions = {
-            fetchColumns: [photoAccessHelper.PhotoKeys.TITLE, photoAccessHelper.PhotoKeys.URI],
-            predicates: predicates
-          }
+        const processImage = async () => {
+          try {
+            // 创建查询条件
+            let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates()
+            predicates.equalTo(photoAccessHelper.PhotoKeys.URI, uri)
+            
+            // 设置查询选项
+            let fetchOptions: photoAccessHelper.FetchOptions = {
+              fetchColumns: [photoAccessHelper.PhotoKeys.TITLE, photoAccessHelper.PhotoKeys.URI],
+              predicates: predicates
+            }
 
-          console.log('开始查询图片资源，URI:', uri)
-          
-          // 获取图片资源
-          let fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> = await phAccessHelper.getAssets(fetchOptions)
-          let photoAsset: photoAccessHelper.PhotoAsset = await fetchResult.getFirstObject()
-          
-          if (!photoAsset) {
-            throw new Error('未找到对应的图片资源')
+            console.log('开始查询图片资源，URI:', uri)
+            
+            // 获取图片资源
+            let fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> = await phAccessHelper.getAssets(fetchOptions)
+            let photoAsset: photoAccessHelper.PhotoAsset = await fetchResult.getFirstObject()
+            
+            if (!photoAsset) {
+              throw new Error('未找到对应的图片资源')
+            }
+            
+            console.log('获取到图片资源，URI:', photoAsset.uri)
+            console.log('图片标题:', photoAsset.get(photoAccessHelper.PhotoKeys.TITLE))
+            
+            // 请求图片数据
+            let requestOptions: photoAccessHelper.RequestOptions = {
+              deliveryMode: photoAccessHelper.DeliveryMode.HIGH_QUALITY_MODE,
+            }
+            
+            console.log('开始请求图片数据...')
+            await photoAccessHelper.MediaAssetManager.requestImageData(
+              appContext, 
+              photoAsset, 
+              requestOptions, 
+              new MediaDataHandler(resolve, reject)
+            )
+            
+            console.log('图片数据请求已发送')
+            fetchResult.close()
+            
+          } catch (apiError) {
+            console.error('新API处理失败，尝试备用方法:', apiError)
+            reject(new Error(`API处理失败: ${apiError instanceof Error ? apiError.message : '未知错误'}`))
           }
-          
-          console.log('获取到图片资源，URI:', photoAsset.uri)
-          console.log('图片标题:', photoAsset.get(photoAccessHelper.PhotoKeys.TITLE))
-          
-          // 请求图片数据
-          let requestOptions: photoAccessHelper.RequestOptions = {
-            deliveryMode: photoAccessHelper.DeliveryMode.HIGH_QUALITY_MODE,
-          }
-          
-          console.log('开始请求图片数据...')
-          await photoAccessHelper.MediaAssetManager.requestImageData(
-            appContext, 
-            photoAsset, 
-            requestOptions, 
-            new MediaDataHandler(resolve, reject)
-          )
-          
-          console.log('图片数据请求已发送')
-          fetchResult.close()
-          
-        } catch (apiError) {
-          console.error('新API处理失败，尝试备用方法:', apiError)
         }
+
+        // 执行异步处理
+        processImage().catch((error: Error) => {
+          console.error('processImage 失败:', error)
+          reject(new Error(`相册图片转换失败: ${error instanceof Error ? error.message : '未知错误'}`))
+        })
+        
       } catch (error) {
         console.error('convertGalleryImageToBase64 失败:', error)
         reject(new Error(`相册图片转换失败: ${error instanceof Error ? error.message : '未知错误'}`))
