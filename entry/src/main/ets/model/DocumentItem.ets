@@ -111,7 +111,7 @@ export class DocumentItem {
 }
 
 // 定义动态字段项接口
-interface DynamicFieldItem {
+export interface DynamicFieldItem {
   key: string
   value: string
 }

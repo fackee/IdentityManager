@@ -22,6 +22,7 @@ export class DocumentDatabaseManager {
   private static instance: DocumentDatabaseManager
   private rdbStore: relationalStore.RdbStore | null = null
   private context: Context | null = null
+  private isInitialized: boolean = false
 
   // 数据库配置
   private static readonly STORE_CONFIG: relationalStore.StoreConfig = {
@@ -71,6 +72,12 @@ export class DocumentDatabaseManager {
 
   // 初始化数据库
   async initialize(context: Context): Promise<boolean> {
+    // 检查是否已经初始化
+    if (this.isInitialized && this.rdbStore) {
+      console.log('数据库已经初始化，跳过重复初始化')
+      return true
+    }
+
     try {
       this.context = context
 
@@ -87,6 +94,10 @@ export class DocumentDatabaseManager {
 
           // 检查数据库版本并进行升级
           const success = await this.handleDatabaseVersion()
+          if (success) {
+            this.isInitialized = true
+            console.log('数据库初始化完成')
+          }
           resolve(success)
         })
       })
@@ -124,7 +135,7 @@ export class DocumentDatabaseManager {
 
   // 保存文档列表
   async saveDocuments(documents: DocumentItem[]): Promise<boolean> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       console.error('数据库未初始化')
       return false
     }
@@ -175,7 +186,7 @@ export class DocumentDatabaseManager {
 
   // 加载文档列表
   async loadDocuments(): Promise<DocumentItem[]> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       console.error('数据库未初始化')
       return []
     }
@@ -223,7 +234,7 @@ export class DocumentDatabaseManager {
 
   // 添加单个文档
   async addDocument(document: DocumentItem): Promise<boolean> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       console.error('数据库未初始化')
       return false
     }
@@ -259,7 +270,7 @@ export class DocumentDatabaseManager {
 
   // 更新单个文档
   async updateDocument(document: DocumentItem): Promise<boolean> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       console.error('数据库未初始化')
       return false
     }
@@ -299,7 +310,7 @@ export class DocumentDatabaseManager {
 
   // 删除单个文档
   async deleteDocument(id: string): Promise<boolean> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       console.error('数据库未初始化')
       return false
     }
@@ -327,7 +338,7 @@ export class DocumentDatabaseManager {
 
   // 根据ID获取文档
   async getDocumentById(id: string): Promise<DocumentItem | null> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       console.error('数据库未初始化')
       return null
     }
@@ -377,7 +388,7 @@ export class DocumentDatabaseManager {
 
   // 根据类型获取文档
   async getDocumentsByType(type: string): Promise<DocumentItem[]> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       console.error('数据库未初始化')
       return []
     }
@@ -428,7 +439,7 @@ export class DocumentDatabaseManager {
 
   // 搜索文档
   async searchDocuments(keyword: string): Promise<DocumentItem[]> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       console.error('数据库未初始化')
       return []
     }
@@ -481,7 +492,7 @@ export class DocumentDatabaseManager {
 
   // 更新文档类型统计
   private async updateDocumentTypes(documents: DocumentItem[]): Promise<void> {
-    if (!this.rdbStore) return
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) return
 
     try {
       // 开始事务
@@ -521,7 +532,7 @@ export class DocumentDatabaseManager {
 
   // 获取文档类型列表
   async getDocumentTypes(): Promise<DocumentTypeInfo[]> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       return []
     }
 
@@ -562,7 +573,7 @@ export class DocumentDatabaseManager {
 
   // 清空所有数据
   async clearAllData(): Promise<boolean> {
-    if (!this.rdbStore) {
+    if (!this.isDatabaseInitialized() || this.rdbStore == null) {
       return false
     }
 
@@ -582,7 +593,19 @@ export class DocumentDatabaseManager {
     if (this.rdbStore) {
       await this.rdbStore.close()
       this.rdbStore = null
+      this.isInitialized = false
       console.log('数据库连接已关闭')
     }
+  }
+
+  // 重置初始化状态（用于测试或特殊情况）
+  resetInitialization(): void {
+    this.isInitialized = false
+    console.log('数据库初始化状态已重置')
+  }
+
+  // 检查是否已初始化
+  isDatabaseInitialized(): boolean {
+    return this.isInitialized
   }
 }

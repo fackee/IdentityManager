@@ -23,6 +23,14 @@ struct Index {
     try {
       this.isLoading = true
       
+      // 初始化数据库
+      const initSuccess = await this.documentDatabaseManager.initialize(getContext())
+      if (!initSuccess) {
+        console.error('数据库初始化失败')
+        this.isLoading = false
+        return
+      }
+      
       // 加载文档类型
       await this.loadDocumentTypes()
       

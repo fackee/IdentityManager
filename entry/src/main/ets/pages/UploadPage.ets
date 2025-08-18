@@ -737,20 +737,23 @@ struct UploadPage {
 
   private async saveDocument() {
     try {
-             // 创建文档对象
-       const document = new DocumentItem(
-         '', // ID将由数据库管理器生成
-         this.documentType, // 使用识别出的文档类型作为名称
-         this.documentType,
-         this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || '',
-         this.dynamicFields.get('有效期限') || this.dynamicFields.get('有效期至') || '',
-         this.imagePath, // imageUrl
-         new Date(), // createTime
-         new Date(), // updateTime
-         this.dynamicFields, // dynamicFields
-         this.confidence, // recognitionConfidence
-         this.imagePath // originalImagePath
-       )
+      // 生成唯一ID
+      const uniqueId = this.generateUniqueId()
+      
+      // 创建文档对象
+      const document = new DocumentItem(
+        uniqueId, // 使用生成的唯一ID
+        this.documentType, // 使用识别出的文档类型作为名称
+        this.documentType,
+        this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || '',
+        this.dynamicFields.get('有效期限') || this.dynamicFields.get('有效期至') || '',
+        this.imagePath, // imageUrl
+        new Date(), // createTime
+        new Date(), // updateTime
+        this.dynamicFields, // dynamicFields
+        this.confidence, // recognitionConfidence
+        this.imagePath // originalImagePath
+      )
 
       // 保存到数据库
       const success = await this.documentDatabaseManager.addDocument(document)
@@ -809,5 +812,12 @@ struct UploadPage {
 
   private goBack() {
     this.getUIContext().getRouter().back()
+  }
+
+  // 生成唯一ID
+  private generateUniqueId(): string {
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 15)
+    return `${timestamp}_${random}`
   }
 } 
