@@ -1,7 +1,9 @@
-import { DocumentItem } from '../model/DocumentItem'
+import { DocumentItem, DynamicFieldItem } from '../model/DocumentItem'
 import router from '@ohos.router'
 import { DocumentDetailParams } from '../types/RouterParams'
 import image from '@kit.ImageKit'
+import { BusinessError, pasteboard } from '@kit.BasicServicesKit'
+import { unifiedDataChannel, uniformDataStruct, uniformTypeDescriptor } from '@kit.ArkData'
 
 @Entry
 @Component
@@ -19,8 +21,9 @@ struct DocumentDetailPage {
         params.documentNumber,
         params.documentExpiry,
         params.documentImage,
-        new Date(),
-        new Date()
+        params.createTime,
+        params.updateTime,
+        params.dynamicFields
       )
     }
   }
@@ -52,31 +55,17 @@ struct DocumentDetailPage {
           .margin({ left: 20, right: 20, bottom: 20 })
 
         // 证件信息
-        Column() {
-          this.InfoItem('证件名称', this.document.name)
+        List() {
           this.InfoItem('证件类型', this.document.type)
-          this.InfoItem('证件号码', this.document.number)
-          this.InfoItem('有效期至', this.document.expiryDate)
-          this.InfoItem('创建时间', this.document.createTime.toLocaleDateString())
-          this.InfoItem('更新时间', this.document.updateTime.toLocaleDateString())
+          
+          // 动态渲染dynamicFields中的数据
+          ForEach(this.document.getAllDynamicFields(), (field: DynamicFieldItem) => {
+            this.InfoItem(field.key, field.value, true)
+          })
         }
+        .height(400)
         .width('100%')
         .padding({ left: 20, right: 20 })
-
-        // 操作按钮
-        Row() {
-          Button('打印')
-            .width('45%')
-            .height(48)
-            .backgroundColor('#4CAF50')
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.printDocument()
-            })
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.SpaceEvenly)
-        .margin({ top: 40, left: 20, right: 20 })
       } else {
         // 加载失败提示
         Column() {
@@ -103,39 +92,38 @@ struct DocumentDetailPage {
   }
 
   @Builder
-  InfoItem(label: string, value: string) {
-    Row() {
-      Text(label)
-        .fontSize(16)
-        .fontColor('#666666')
-        .width('30%')
-      
-      Text(value)
-        .fontSize(16)
-        .fontColor('#333333')
-        .fontWeight(FontWeight.Medium)
-        .layoutWeight(1)
-    }
-    .width('100%')
-    .padding(16)
-    .backgroundColor(Color.White)
-    .borderRadius(8)
-    .margin({ bottom: 8 })
-  }
+  InfoItem(label: string, value: string, showCopyButton: boolean = false) {
+    ListItem() {
+      Row() {
+        Text(label)
+          .fontSize(16)
+          .fontColor('#666666')
+          .width('30%')
 
-  private printDocument() {
-    if (this.document) {
-      this.getUIContext().getRouter().pushUrl({
-        url: 'pages/PrintPage',
-        params: {
-          documentId: this.document.id,
-          documentName: this.document.name,
-          documentType: this.document.type,
-          documentNumber: this.document.number,
-          documentExpiry: this.document.expiryDate,
-          documentImage: this.document.imageUrl
+        Text(value)
+          .fontSize(16)
+          .fontColor('#333333')
+          .fontWeight(FontWeight.Medium)
+          .layoutWeight(1)
+
+        if (showCopyButton) {
+          Button('复制')
+            .fontSize(12)
+            .backgroundColor('#007DFF')
+            .fontColor(Color.White)
+            .borderRadius(4)
+            .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+            .margin({ left: 8 })
+            .onClick(() => {
+              this.copyToClipboard(value)
+            })
         }
-      })
+      }
+      .width('100%')
+      .padding(16)
+      .backgroundColor(Color.White)
+      .borderRadius(8)
+      .margin({ bottom: 8 })
     }
   }
 
@@ -146,5 +134,30 @@ struct DocumentDetailPage {
 
   private goBack() {
     this.getUIContext().getRouter().back()
+  }
+
+  private copyToClipboard(text: string) {
+    // 构造一条PlainText数据
+    let plainText: uniformDataStruct.PlainText = {
+      uniformDataType: uniformTypeDescriptor.UniformDataType.PLAIN_TEXT,
+      textContent: text,
+      abstract: '复制的证件信息'
+    }
+    let record = new unifiedDataChannel.UnifiedRecord(uniformTypeDescriptor.UniformDataType.PLAIN_TEXT, plainText)
+    let data = new unifiedDataChannel.UnifiedData()
+    data.addRecord(record)
+
+    // 向系统剪贴板中存入数据
+    let systemPasteboard: pasteboard.SystemPasteboard = pasteboard.getSystemPasteboard()
+    systemPasteboard.setUnifiedData(data).then(() => {
+      this.getUIContext().getPromptAction().showToast({
+        message: '已复制到剪切板'
+      })
+      // 可以在这里添加提示信息
+    }).catch((err: BusinessError) => {
+      this.getUIContext().getPromptAction().showToast({
+        message: '复制到剪贴板失败: ' + err.message
+      })
+    })
   }
 }

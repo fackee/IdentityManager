@@ -28,6 +28,10 @@ export interface DocumentDetailParams {
   documentNumber?: string
   documentExpiry?: string
   documentImage?: string
+  createTime?: Date
+  updateTime?: Date
+  dynamicFields?: Record<string,string>
+
 }
 
 export interface UploadParams {

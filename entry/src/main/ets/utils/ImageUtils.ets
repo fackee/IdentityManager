@@ -166,7 +166,7 @@ export class ImageUtils {
         }
 
         // 创建ImageSource并转换为base64
-        image.createImagePacker().packing(image.createImageSource(uri), { 
+        image.createImagePacker().packToData(image.createImageSource(uri), {
           format: 'image/jpg', 
           quality: 100, 
           bufferSize: 50 * 1024 * 1024 

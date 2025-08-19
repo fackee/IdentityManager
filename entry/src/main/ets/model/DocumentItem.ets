@@ -1,4 +1,3 @@
-import { HashMap } from "@kit.ArkTS"
 
 export class DocumentItem {
   id: string
@@ -10,7 +9,7 @@ export class DocumentItem {
   createTime: Date
   updateTime: Date
   // 新增字段：动态表单数据
-  dynamicFields: Map<string, string> = new Map()
+  dynamicFields: Record<string, string> = {}
   // 新增字段：识别置信度
   recognitionConfidence: number = 0
   // 新增字段：原始图片路径
@@ -25,7 +24,7 @@ export class DocumentItem {
     imageUrl: string = '',
     createTime: Date = new Date(),
     updateTime: Date = new Date(),
-    dynamicFields: Map<string, string> = new Map(),
+    dynamicFields: Record<string, string> = {},
     recognitionConfidence: number = 0,
     originalImagePath: string = ''
   ) {
@@ -44,30 +43,28 @@ export class DocumentItem {
 
   // 添加动态字段
   addDynamicField(key: string, value: string) {
-    this.dynamicFields.set(key, value)
+    this.dynamicFields[key] = value
   }
 
   // 获取动态字段值
   getDynamicField(key: string): string {
-    return this.dynamicFields.get(key) || ''
+    return this.dynamicFields[key] || ''
   }
 
   // 获取所有动态字段
   getAllDynamicFields(): Array<DynamicFieldItem> {
     const result: Array<DynamicFieldItem> = []
-    this.dynamicFields.forEach((value, key) => {
-      result.push({key, value})
+    let keys: string[] = Object.keys(this.dynamicFields);
+    console.log("getAllDynamicFields", JSON.stringify(this.dynamicFields))
+    keys.forEach((k) => {
+      let val = this.dynamicFields[k]
+      result.push({ key:k,value:val})
     })
     return result
   }
 
   // 转换为JSON对象（用于存储）
   toJSON(): DocumentItemJSON {
-    const dynamicFieldsObj: Record<string, string> = {}
-    this.dynamicFields.forEach((value, key) => {
-      dynamicFieldsObj[key] = value
-    })
-    
     const result: DocumentItemJSON = {
       id: this.id,
       name: this.name,
@@ -77,7 +74,7 @@ export class DocumentItem {
       imageUrl: this.imageUrl,
       createTime: this.createTime.toISOString(),
       updateTime: this.updateTime.toISOString(),
-      dynamicFields: dynamicFieldsObj,
+      dynamicFields: this.dynamicFields,
       recognitionConfidence: this.recognitionConfidence,
       originalImagePath: this.originalImagePath
     }
@@ -86,10 +83,10 @@ export class DocumentItem {
 
   // 从JSON对象创建DocumentItem
   static fromJSON(json: DocumentItemJSON): DocumentItem {
-    const dynamicFields = new Map<string, string>()
+    const dynamicFields: Record<string,string> = {}
     if (json.dynamicFields) {
       Object.keys(json.dynamicFields).forEach(key => {
-        dynamicFields.set(key, json.dynamicFields![key])
+        dynamicFields[key] = json.dynamicFields![key]
       })
     }
     

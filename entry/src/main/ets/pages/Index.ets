@@ -83,7 +83,7 @@ struct Index {
       }
       
       this.documents = documents
-      console.log('文档加载成功，共', documents.length, '个')
+      console.log('文档加载成功', JSON.stringify(this.documents))
     } catch (error) {
       console.error('加载文档失败:', error)
       this.documents = []
@@ -152,26 +152,6 @@ struct Index {
         }
         .layoutWeight(1)
       }
-
-      // 底部导航栏
-      Row() {
-        ForEach(['首页', '设置'], (tab: string, index: number) => {
-          Column() {
-            Text(tab)
-              .fontSize(12)
-              .fontColor(index === 0 ? '#007DFF' : '#666666')
-              .margin({ top: 4 })
-          }
-          .layoutWeight(1)
-          .onClick(() => {
-            this.navigateToTab(index)
-          })
-        })
-      }
-      .width('100%')
-      .height(60)
-      .backgroundColor(Color.White)
-      .border({ width: { top: 1 }, color: '#E0E0E0' })
     }
     .width('100%')
     .height('100%')
@@ -313,9 +293,23 @@ struct Index {
           .width(60)
           .height(32)
           .fontSize(12)
-          .backgroundColor('#F0F0F0')
+          .fontColor(Color.White)
+          .backgroundColor('#007DFF')
+          .borderRadius(16)
           .onClick(() => {
             this.printDocument(document)
+          })
+          .margin({ bottom: 8 })
+        
+        Button('删除')
+          .width(60)
+          .height(32)
+          .fontSize(12)
+          .fontColor(Color.White)
+          .backgroundColor('#FF4444')
+          .borderRadius(16)
+          .onClick(() => {
+            this.deleteDocument(document)
           })
       }
     }
@@ -348,7 +342,10 @@ struct Index {
         documentType: document.type,
         documentNumber: document.number,
         documentExpiry: document.expiryDate,
-        documentImage: document.imageUrl
+        documentImage: document.imageUrl,
+        createTime: document.createTime,
+        updateTime: document.updateTime,
+        dynamicFields: document.dynamicFields
       }
     })
   }
@@ -367,6 +364,53 @@ struct Index {
         documentImage: document.imageUrl
       }
     })
+  }
+
+  private async deleteDocument(document: DocumentItem) {
+    try {
+      // 显示确认对话框
+      this.getUIContext().showAlertDialog({
+        title: '确认删除',
+        message: `确定要删除证件"${document.name}"吗？此操作不可撤销。`,
+        primaryButton: {
+          value: '取消',
+          action: () => {
+            console.log('用户取消删除')
+          }
+        },
+        secondaryButton: {
+          value: '删除',
+          fontColor: '#FF4444',
+          action: async () => {
+            try {
+              // 从数据库删除证件
+              const success = await this.documentDatabaseManager.deleteDocument(document.id)
+              if (success) {
+                console.log('证件删除成功')
+                // 重新加载文档列表
+                await this.loadDocuments()
+                // 显示成功提示
+                this.getUIContext().getPromptAction().showToast({
+                  message: '证件删除成功'
+                })
+              } else {
+                console.error('证件删除失败')
+                this.getUIContext().getPromptAction().showToast({
+                  message: '删除失败，请重试'
+                })
+              }
+            } catch (error) {
+              console.error('删除证件时发生错误:', error)
+              this.getUIContext().getPromptAction().showToast({
+                message: '删除失败，请重试'
+              })
+            }
+          }
+        }
+      })
+    } catch (error) {
+      console.error('显示删除确认对话框失败:', error)
+    }
   }
 
   private navigateToTab(index: number) {

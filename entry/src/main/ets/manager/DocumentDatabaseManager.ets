@@ -2,6 +2,7 @@ import { relationalStore } from '@kit.ArkData'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { DocumentItem } from '../model/DocumentItem'
 import { DocumentTypeInfo } from '../types/DocumentRecognition'
+import { JSON } from '@kit.ArkTS';
 
 // 定义 JSON 接口
 interface DocumentItemJSON {
@@ -198,12 +199,13 @@ export class DocumentDatabaseManager {
       const documents: DocumentItem[] = []
       while (resultSet.goToNextRow()) {
         const dynamicFieldsStr = resultSet.getString(resultSet.getColumnIndex('dynamicFields'))
-        const dynamicFields = new Map<string, string>()
+        console.log("dynamicFieldsStr", dynamicFieldsStr)
+        const dynamicFields:Record<string,string> = {}
 
         if (dynamicFieldsStr) {
           const dynamicFieldsObj = JSON.parse(dynamicFieldsStr) as Map<string,string>
           Object.keys(dynamicFieldsObj).forEach(key => {
-            dynamicFields.set(key, dynamicFieldsObj[key])
+            dynamicFields[key] = dynamicFieldsObj[key]
           })
         }
 
@@ -351,12 +353,12 @@ export class DocumentDatabaseManager {
 
       if (resultSet.goToFirstRow()) {
         const dynamicFieldsStr = resultSet.getString(resultSet.getColumnIndex('dynamicFields'))
-        const dynamicFields = new Map<string, string>()
+        const dynamicFields:Record<string,string> = {}
 
         if (dynamicFieldsStr) {
           const dynamicFieldsObj = JSON.parse(dynamicFieldsStr) as Map<string,string>
           Object.keys(dynamicFieldsObj).forEach(key => {
-            dynamicFields.set(key, dynamicFieldsObj[key])
+            dynamicFields[key] = dynamicFieldsObj[key]
           })
         }
 
@@ -404,12 +406,12 @@ export class DocumentDatabaseManager {
       const documents: DocumentItem[] = []
       while (resultSet.goToNextRow()) {
         const dynamicFieldsStr = resultSet.getString(resultSet.getColumnIndex('dynamicFields'))
-        const dynamicFields = new Map<string, string>()
+        const dynamicFields:Record<string,string> = {}
 
         if (dynamicFieldsStr) {
-          const dynamicFieldsObj = JSON.parse(dynamicFieldsStr) as Map<string,string>
+          const dynamicFieldsObj = JSON.parse(dynamicFieldsStr) as Record<string,string>
           Object.keys(dynamicFieldsObj).forEach(key => {
-            dynamicFields.set(key, dynamicFieldsObj[key])
+            dynamicFields[key] = dynamicFieldsObj[key]
           })
         }
 
@@ -457,12 +459,12 @@ export class DocumentDatabaseManager {
       const documents: DocumentItem[] = []
       while (resultSet.goToNextRow()) {
         const dynamicFieldsStr = resultSet.getString(resultSet.getColumnIndex('dynamicFields'))
-        const dynamicFields = new Map<string, string>()
+        const dynamicFields: Record<string,string> = {}
 
         if (dynamicFieldsStr) {
-          const dynamicFieldsObj = JSON.parse(dynamicFieldsStr) as Map<string,string>
+          const dynamicFieldsObj = JSON.parse(dynamicFieldsStr) as Record<string,string>
           Object.keys(dynamicFieldsObj).forEach(key => {
-            dynamicFields.set(key, dynamicFieldsObj[key])
+            dynamicFields[key] = dynamicFieldsObj[key]
           })
         }
 

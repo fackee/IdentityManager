@@ -32,6 +32,7 @@ struct PrintPage {
     // 获取路由参数
     const params = this.getUIContext().getRouter().getParams() as DocumentPrintParams
     if (params) {
+      console.log("params document", JSON.stringify(params))
       this.mode = params.mode || 'print'
       if (this.mode === 'print' && params.documentId) {
         // 打印模式，接收证件数据

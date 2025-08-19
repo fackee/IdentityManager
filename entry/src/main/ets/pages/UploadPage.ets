@@ -739,21 +739,25 @@ struct UploadPage {
     try {
       // 生成唯一ID
       const uniqueId = this.generateUniqueId()
-      
+      let dynamicFieldRecords: Record<string,string> = {}
+      this.dynamicFields.forEach((value:string, key:string) => {
+        dynamicFieldRecords[key] = value
+      })
       // 创建文档对象
       const document = new DocumentItem(
         uniqueId, // 使用生成的唯一ID
         this.documentType, // 使用识别出的文档类型作为名称
         this.documentType,
-        this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || '',
+        this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || this.dynamicFields.get('公民身份号码') || '',
         this.dynamicFields.get('有效期限') || this.dynamicFields.get('有效期至') || '',
         this.imagePath, // imageUrl
         new Date(), // createTime
         new Date(), // updateTime
-        this.dynamicFields, // dynamicFields
+        dynamicFieldRecords, // dynamicFields
         this.confidence, // recognitionConfidence
         this.imagePath // originalImagePath
       )
+      console.log("add document", JSON.stringify(document))
 
       // 保存到数据库
       const success = await this.documentDatabaseManager.addDocument(document)
