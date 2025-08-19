@@ -47,6 +47,10 @@
     {
       "name": "network_permission_reason",
       "value": "用于网络连接和云同步功能"
+    },
+    {
+      "name": "location_permission_reason",
+      "value": "用于蓝牙设备扫描和定位功能"
     }
   ]
 }

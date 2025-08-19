@@ -309,16 +309,6 @@ struct Index {
       .margin({ left: 12 })
 
       Column() {
-        Button('编辑')
-          .width(60)
-          .height(32)
-          .fontSize(12)
-          .backgroundColor('#F0F0F0')
-          .margin({ bottom: 8 })
-          .onClick(() => {
-            this.editDocument(document)
-          })
-
         Button('打印')
           .width(60)
           .height(32)
@@ -352,22 +342,6 @@ struct Index {
     // 跳转到证件详情页面
     this.getUIContext().getRouter().pushUrl({
       url: 'pages/DocumentDetailPage',
-      params: {
-        documentId: document.id,
-        documentName: document.name,
-        documentType: document.type,
-        documentNumber: document.number,
-        documentExpiry: document.expiryDate,
-        documentImage: document.imageUrl
-      }
-    })
-  }
-
-  private editDocument(document: DocumentItem) {
-    console.log('编辑证件', document.id)
-    // 跳转到编辑页面并传递证件数据
-    this.getUIContext().getRouter().pushUrl({
-      url: 'pages/EditPage',
       params: {
         documentId: document.id,
         documentName: document.name,

@@ -38,15 +38,6 @@ struct DocumentDetailPage {
           .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .margin({ left: 16 })
-
-        Blank()
-
-        Button('编辑')
-          .backgroundColor('#007DFF')
-          .fontColor(Color.White)
-          .onClick(() => {
-            this.editDocument()
-          })
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 12, bottom: 12 })
@@ -81,15 +72,6 @@ struct DocumentDetailPage {
             .fontColor(Color.White)
             .onClick(() => {
               this.printDocument()
-            })
-
-          Button('分享')
-            .width('45%')
-            .height(48)
-            .backgroundColor('#FF9800')
-            .fontColor(Color.White)
-            .onClick(() => {
-              this.shareDocument()
             })
         }
         .width('100%')
@@ -141,22 +123,6 @@ struct DocumentDetailPage {
     .margin({ bottom: 8 })
   }
 
-  private editDocument() {
-    if (this.document) {
-      this.getUIContext().getRouter().pushUrl({
-        url: 'pages/EditPage',
-        params: {
-          documentId: this.document.id,
-          documentName: this.document.name,
-          documentType: this.document.type,
-          documentNumber: this.document.number,
-          documentExpiry: this.document.expiryDate,
-          documentImage: this.document.imageUrl
-        }
-      })
-    }
-  }
-
   private printDocument() {
     if (this.document) {
       this.getUIContext().getRouter().pushUrl({
@@ -171,26 +137,6 @@ struct DocumentDetailPage {
         }
       })
     }
-  }
-
-  private shareDocument() {
-    console.log('分享证件')
-    this.getUIContext().showAlertDialog({
-      title: '分享证件',
-      message: '选择分享方式',
-      primaryButton: {
-        value: '微信',
-        action: () => {
-          console.log('分享到微信')
-        }
-      },
-      secondaryButton: {
-        value: 'QQ',
-        action: () => {
-          console.log('分享到QQ')
-        }
-      }
-    })
   }
 
   private reloadDocument() {

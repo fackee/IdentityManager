@@ -15,10 +15,6 @@ class MediaDataHandler implements photoAccessHelper.MediaAssetDataHandler<ArrayB
   constructor(resolve: (value: string) => void, reject: (reason: Error) => void) {
     this.resolve = resolve
     this.reject = reject
-    
-    // 绑定方法以保持this上下文
-    this.onDataPrepared = this.onDataPrepared.bind(this)
-    this.onError = this.onError.bind(this)
   }
 
   onDataPrepared = (imageData: ArrayBuffer): void => {
