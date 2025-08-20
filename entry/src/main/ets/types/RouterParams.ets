@@ -35,8 +35,14 @@ export interface DocumentDetailParams {
 }
 
 export interface UploadParams {
-  mode?: 'camera' | 'gallery'
+  mode?: 'camera' | 'gallery' | 'edit'
   imagePath?: string
+  documentId?: string
+  documentName?: string
+  documentType?: string
+  documentNumber?: string
+  documentExpiry?: string
+  documentImage?: string
 }
 
 export interface SettingsParams {

@@ -19,6 +19,22 @@ struct Index {
     this.initializeData()
   }
 
+  onPageShow() {
+    // 页面重新显示时刷新数据，确保从其他页面返回时数据是最新的
+    this.refreshData()
+  }
+
+  async refreshData() {
+    try {
+      // 重新加载文档类型统计
+      await this.loadDocumentTypes()
+      // 重新加载文档列表
+      await this.loadDocuments()
+    } catch (error) {
+      console.error('刷新数据失败:', error)
+    }
+  }
+
   async initializeData() {
     try {
       this.isLoading = true
@@ -387,6 +403,8 @@ struct Index {
               const success = await this.documentDatabaseManager.deleteDocument(document.id)
               if (success) {
                 console.log('证件删除成功')
+                // 重新加载文档类型统计
+                await this.loadDocumentTypes()
                 // 重新加载文档列表
                 await this.loadDocuments()
                 // 显示成功提示

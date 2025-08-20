@@ -35,6 +35,15 @@ struct UploadPage {
   @State dynamicFields: Map<string, string> = new Map()
   @State documentType: string = ''
   @State confidence: number = 0
+  
+  // 编辑模式相关状态
+  @State isEditMode: boolean = false
+  @State editDocumentId: string = ''
+  @State editDocumentName: string = ''
+  @State editDocumentType: string = ''
+  @State editDocumentNumber: string = ''
+  @State editDocumentExpiry: string = ''
+  @State editDocumentImage: string = ''
 
   // 相册选择相关状态
   @State showPhotoPicker: boolean = false
@@ -62,7 +71,25 @@ struct UploadPage {
     
     // 检查是否有传入的参数
     const params = this.getUIContext().getRouter().getParams() as UploadPageParams
-    if (params?.mode) {
+    if (params?.mode === 'edit') {
+      // 编辑模式
+      this.isEditMode = true
+      this.editDocumentId = params.documentId || ''
+      this.editDocumentName = params.documentName || ''
+      this.editDocumentType = params.documentType || ''
+      this.editDocumentNumber = params.documentNumber || ''
+      this.editDocumentExpiry = params.documentExpiry || ''
+      this.editDocumentImage = params.documentImage || ''
+      
+      // 设置编辑模式的初始数据
+      this.documentType = this.editDocumentType
+      this.imagePath = this.editDocumentImage
+      this.dynamicFields.set('证件号码', this.editDocumentNumber)
+      this.dynamicFields.set('有效期限', this.editDocumentExpiry)
+      
+      // 直接进入编辑步骤
+      this.currentStep = 3
+    } else if (params?.mode) {
       this.selectUploadMethod(params.mode)
     }
   }
@@ -154,7 +181,7 @@ struct UploadPage {
             this.goBack()
           })
         
-        Text('添加证件')
+        Text(this.isEditMode ? '编辑证件' : '添加证件')
           .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .margin({ left: 16 })
@@ -737,35 +764,56 @@ struct UploadPage {
 
   private async saveDocument() {
     try {
-      // 生成唯一ID
-      const uniqueId = this.generateUniqueId()
       let dynamicFieldRecords: Record<string,string> = {}
       this.dynamicFields.forEach((value:string, key:string) => {
         dynamicFieldRecords[key] = value
       })
-      // 创建文档对象
-      const document = new DocumentItem(
-        uniqueId, // 使用生成的唯一ID
-        this.documentType, // 使用识别出的文档类型作为名称
-        this.documentType,
-        this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || this.dynamicFields.get('公民身份号码') || '',
-        this.dynamicFields.get('有效期限') || this.dynamicFields.get('有效期至') || '',
-        this.imagePath, // imageUrl
-        new Date(), // createTime
-        new Date(), // updateTime
-        dynamicFieldRecords, // dynamicFields
-        this.confidence, // recognitionConfidence
-        this.imagePath // originalImagePath
-      )
-      console.log("add document", JSON.stringify(document))
-
-      // 保存到数据库
-      const success = await this.documentDatabaseManager.addDocument(document)
+      
+      let success = false
+      
+      if (this.isEditMode) {
+        // 编辑模式：更新现有文档
+        const document = new DocumentItem(
+          this.editDocumentId, // 使用原有ID
+          this.documentType, // 使用识别出的文档类型作为名称
+          this.documentType,
+          this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || this.dynamicFields.get('公民身份号码') || '',
+          this.dynamicFields.get('有效期限') || this.dynamicFields.get('有效期至') || '',
+          this.imagePath, // imageUrl
+          new Date(), // createTime (在更新时会被忽略，保持原有值)
+          new Date(), // updateTime (更新修改时间)
+          dynamicFieldRecords, // dynamicFields
+          this.confidence, // recognitionConfidence
+          this.imagePath // originalImagePath
+        )
+        console.log("update document", JSON.stringify(document))
+        
+        success = await this.documentDatabaseManager.updateDocument(document)
+      } else {
+        // 新增模式：创建新文档
+        const uniqueId = this.generateUniqueId()
+        const document = new DocumentItem(
+          uniqueId, // 使用生成的唯一ID
+          this.documentType, // 使用识别出的文档类型作为名称
+          this.documentType,
+          this.dynamicFields.get('证件号码') || this.dynamicFields.get('护照号码') || this.dynamicFields.get('驾驶证号码') || this.dynamicFields.get('公民身份号码') || '',
+          this.dynamicFields.get('有效期限') || this.dynamicFields.get('有效期至') || '',
+          this.imagePath, // imageUrl
+          new Date(), // createTime
+          new Date(), // updateTime
+          dynamicFieldRecords, // dynamicFields
+          this.confidence, // recognitionConfidence
+          this.imagePath // originalImagePath
+        )
+        console.log("add document", JSON.stringify(document))
+        
+        success = await this.documentDatabaseManager.addDocument(document)
+      }
       
       if (success) {
         this.getUIContext().showAlertDialog({
           title: '成功',
-          message: '文档保存成功',
+          message: this.isEditMode ? '文档更新成功' : '文档保存成功',
           primaryButton: {
             value: '确定',
             action: () => {
@@ -776,7 +824,7 @@ struct UploadPage {
       } else {
         this.getUIContext().showAlertDialog({
           title: '错误',
-          message: '保存失败',
+          message: this.isEditMode ? '更新失败' : '保存失败',
           primaryButton: {
             value: '确定',
             action: () => {
@@ -789,7 +837,7 @@ struct UploadPage {
       console.error('保存文档失败:', error)
       this.getUIContext().showAlertDialog({
         title: '错误',
-        message: '保存失败',
+        message: this.isEditMode ? '更新失败' : '保存失败',
         primaryButton: {
           value: '确定',
           action: () => {
