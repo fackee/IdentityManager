@@ -6,6 +6,7 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit'
 import dataSharePredicates from '@ohos.data.dataSharePredicates'
 import { ImageSelectionResult } from '../types/DocumentRecognition'
 import { PermissionUtils } from './PermissionUtils'
+import { BusinessError } from '@kit.BasicServicesKit'
 
 // 媒体数据处理器
 class MediaDataHandler implements photoAccessHelper.MediaAssetDataHandler<ArrayBuffer> {
@@ -106,10 +107,11 @@ export class ImageUtils {
       if (result.resultCode === 0 && result.resultUri) {
         // 拍照成功
         console.info('拍照成功，图片URI:', result.resultUri);
+        let imageBase64 = await ImageUtils.convertCameraImageToBase64(result.resultUri)
         return {
           success: true,
           imagePath: result.resultUri,
-          imageBase64: '' // 暂时为空，需要时可以转换
+          imageBase64: imageBase64
         }
       } else {
         // 拍照失败或被取消
@@ -179,6 +181,39 @@ export class ImageUtils {
         .catch((err: Error) => {
           console.error('图片转换失败:', err)
           reject(new Error(`图片转换失败: ${err.message}`))
+        })
+      } catch (error) {
+        console.error('convertImageUriToBase64 初始化失败:', error)
+        reject(new Error(`图片转换初始化失败: ${error instanceof Error ? error.message : '未知错误'}`))
+      }
+    })
+  }
+
+  static async convertCameraImageToBase64(uri: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      try {
+        // 检查URI是否有效
+        if (!uri || uri.trim() === '') {
+          reject(new Error('无效的图片URI'))
+          return
+        }
+
+        let file = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY)
+        const imageSourceApi = image.createImageSource(file.fd);
+        imageSourceApi.createPixelMap().then(async PixelMap => {
+          let num = PixelMap.getPixelBytesNumber();
+          let readBuffer: ArrayBuffer = new ArrayBuffer(num);
+          PixelMap.readPixelsToBufferSync(readBuffer)
+          let utilBase64Helper = new util.Base64Helper();
+          // 获取到图片Base64字符串
+          let imageBase64Str = utilBase64Helper.encodeToStringSync(new Uint8Array(readBuffer));
+          // 释放资源
+          fileIo.close(file.fd)
+          imageSourceApi.release();
+          resolve(imageBase64Str)
+        }).catch((error: BusinessError) => {
+          console.error(`PhotoViewPicker.select failed with err: ${error.code}, ${error.message}`);
+          reject(new Error(`图片转换初始化失败: ${error instanceof Error ? error.message : '未知错误'}`))
         })
       } catch (error) {
         console.error('convertImageUriToBase64 初始化失败:', error)
